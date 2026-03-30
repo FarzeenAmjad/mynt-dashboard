@@ -3,10 +3,15 @@ import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { Heart, Landmark, BookOpen, Users, ArrowLeft, CheckCircle, XCircle, AlertTriangle, Eye } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useMyths } from "@/hooks/useMyths";
+import { useMythCategoryCounts } from "@/hooks/useMyths";
 
 const CategoriesPage = () => {
   const { category } = useParams();
   const { t } = useLanguage();
+
+  const { data: myths = [] } = useMyths({ category: category ? category.charAt(0).toUpperCase() + category.slice(1) : undefined });
+  const { data: categoryCounts = {} } = useMythCategoryCounts();
 
   const categoryInfo = {
     health: {
@@ -47,25 +52,6 @@ const CategoriesPage = () => {
     },
   };
 
-  const mythsByCategory = {
-    health: [
-      { id: "1", title: "Eating rice at night causes weight gain", status: "debunked", views: 12500 },
-      { id: "2", title: "Drinking milk with fish causes skin diseases", status: "debunked", views: 7600 },
-      { id: "3", title: "Green tea boosts metabolism significantly", status: "partial", views: 6200 },
-    ],
-    cultural: [
-      { id: "7", title: "Black cats bring bad luck", status: "debunked", views: 8900 },
-      { id: "8", title: "Breaking a mirror brings 7 years bad luck", status: "debunked", views: 5600 },
-    ],
-    historical: [
-      { id: "10", title: "The Great Wall is visible from space", status: "debunked", views: 7800 },
-    ],
-    social: [
-      { id: "12", title: "Full moon affects human behavior", status: "partial", views: 4800 },
-      { id: "13", title: "We only use 10% of our brain", status: "debunked", views: 6700 },
-    ],
-  };
-
   const statusConfig = {
     verified: { icon: CheckCircle, label: t("status.verified"), color: "text-verified", bg: "bg-verified/10" },
     debunked: { icon: XCircle, label: t("status.debunked"), color: "text-debunked", bg: "bg-debunked/10" },
@@ -73,7 +59,6 @@ const CategoriesPage = () => {
   };
 
   const selectedCategory = category ? categoryInfo[category as keyof typeof categoryInfo] : null;
-  const myths = category ? mythsByCategory[category as keyof typeof mythsByCategory] || [] : [];
 
   if (category && selectedCategory) {
     const CategoryIcon = selectedCategory.icon;
@@ -147,7 +132,7 @@ const CategoriesPage = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
             {Object.values(categoryInfo).map((cat) => {
               const CategoryIcon = cat.icon;
-              const count = mythsByCategory[cat.id as keyof typeof mythsByCategory]?.length || 0;
+              const count = (categoryCounts as Record<string, number>)[cat.id.charAt(0).toUpperCase() + cat.id.slice(1)] || 0;
               return (
                 <Link key={cat.id} to={`/categories/${cat.id}`} className={`bg-gradient-to-br ${cat.color} rounded-2xl p-8 hover:shadow-card transition-all duration-300 hover:-translate-y-1`}>
                   <div className={`w-14 h-14 rounded-xl ${cat.iconBg} flex items-center justify-center mb-4`}>

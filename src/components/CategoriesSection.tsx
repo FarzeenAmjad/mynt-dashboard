@@ -1,9 +1,11 @@
 import { Link } from "react-router-dom";
 import { Heart, Landmark, BookOpen, Users, ArrowRight } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useMythCategoryCounts } from "@/hooks/useMyths";
 
 export const CategoriesSection = () => {
   const { t } = useLanguage();
+  const { data: categoryCounts = {} } = useMythCategoryCounts();
 
   const categories = [
     {
@@ -11,7 +13,7 @@ export const CategoriesSection = () => {
       icon: Heart,
       title: t("categories.health.title"),
       description: t("categories.health.desc"),
-      count: 124,
+      count: categoryCounts['Health'] || 0,
       color: "from-red-500/20 to-pink-500/20",
       iconColor: "text-red-500",
     },
@@ -20,7 +22,7 @@ export const CategoriesSection = () => {
       icon: Landmark,
       title: t("categories.cultural.title"),
       description: t("categories.cultural.desc"),
-      count: 89,
+      count: categoryCounts['Cultural'] || 0,
       color: "from-purple-500/20 to-indigo-500/20",
       iconColor: "text-purple-500",
     },
@@ -29,7 +31,7 @@ export const CategoriesSection = () => {
       icon: BookOpen,
       title: t("categories.historical.title"),
       description: t("categories.historical.desc"),
-      count: 67,
+      count: categoryCounts['Historical'] || 0,
       color: "from-amber-500/20 to-orange-500/20",
       iconColor: "text-amber-500",
     },
@@ -38,7 +40,7 @@ export const CategoriesSection = () => {
       icon: Users,
       title: t("categories.social.title"),
       description: t("categories.social.desc"),
-      count: 98,
+      count: categoryCounts['Social'] || 0,
       color: "from-emerald-500/20 to-teal-500/20",
       iconColor: "text-emerald-500",
     },

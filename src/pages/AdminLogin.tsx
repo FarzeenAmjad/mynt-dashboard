@@ -1,46 +1,49 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Lock, Mail, Eye, EyeOff, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-
-// Demo credentials for frontend only
-const DEMO_ADMIN = {
-  email: "admin@mythguider.pk",
-  password: "admin123",
-};
+import { useAuth } from "@/contexts/AuthContext";
 
 const AdminLogin = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { signIn, user, profile, isLoading: authLoading } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
+  // If already logged in as admin, redirect to dashboard
+  useEffect(() => {
+    if (!authLoading && user && profile?.role === "admin") {
+      navigate("/admin/dashboard");
+    }
+  }, [user, profile, authLoading, navigate]);
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    const { error } = await signIn(email, password);
 
-    if (email === DEMO_ADMIN.email && password === DEMO_ADMIN.password) {
-      localStorage.setItem("adminAuth", "true");
-      toast({
-        title: "Welcome back, Admin!",
-        description: "You have successfully logged in.",
-      });
-      navigate("/admin/dashboard");
-    } else {
+    if (error) {
       toast({
         title: "Invalid credentials",
-        description: "Please check your email and password.",
+        description: error.message,
         variant: "destructive",
       });
+      setIsLoading(false);
+      return;
     }
 
-    setIsLoading(false);
+    // Auth state change will trigger the useEffect above to redirect if admin
+    // But we need to check the role after sign-in
+    // The profile will be fetched by AuthContext's onAuthStateChange
+    // Give it a moment to fetch the profile
+    setTimeout(() => {
+      setIsLoading(false);
+    }, 1500);
   };
 
   return (
@@ -118,14 +121,9 @@ const AdminLogin = () => {
             </Button>
           </form>
 
-          {/* Demo Credentials Notice */}
           <div className="mt-6 p-4 rounded-xl bg-muted">
-            <p className="text-xs text-muted-foreground text-center mb-2">
-              Demo Credentials:
-            </p>
-            <p className="text-xs text-center font-mono">
-              Email: admin@mythguider.pk<br />
-              Password: admin123
+            <p className="text-xs text-muted-foreground text-center">
+              Admin access only. Use your admin credentials to sign in.
             </p>
           </div>
         </div>
