@@ -1,0 +1,241 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=DM+Sans:wght@300;400;500;600;700&display=swap');
+
+@layer base {
+  :root {
+    /* Pakistani heritage inspired palette */
+    --background: 45 30% 97%;
+    --foreground: 210 25% 15%;
+
+    --card: 45 25% 99%;
+    --card-foreground: 210 25% 15%;
+
+    --popover: 45 25% 99%;
+    --popover-foreground: 210 25% 15%;
+
+    /* Emerald green - Pakistani flag inspired */
+    --primary: 160 60% 28%;
+    --primary-foreground: 45 30% 97%;
+
+    /* Warm gold accent */
+    --secondary: 40 70% 50%;
+    --secondary-foreground: 210 25% 15%;
+
+    --muted: 45 20% 92%;
+    --muted-foreground: 210 15% 45%;
+
+    /* Rich amber accent */
+    --accent: 35 85% 55%;
+    --accent-foreground: 210 25% 15%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 45 30% 97%;
+
+    --border: 45 20% 88%;
+    --input: 45 20% 88%;
+    --ring: 160 60% 28%;
+
+    --radius: 0.75rem;
+
+    /* Custom colors */
+    --emerald: 160 60% 28%;
+    --emerald-light: 160 50% 40%;
+    --gold: 40 70% 50%;
+    --gold-light: 45 75% 65%;
+    --cream: 45 30% 97%;
+    --charcoal: 210 25% 15%;
+    
+    /* Verification status colors */
+    --verified: 142 71% 45%;
+    --debunked: 0 72% 51%;
+    --partial: 45 93% 47%;
+
+    /* Gradients */
+    --gradient-hero: linear-gradient(135deg, hsl(160 60% 28%) 0%, hsl(160 50% 35%) 50%, hsl(45 70% 50%) 100%);
+    --gradient-card: linear-gradient(180deg, hsl(45 25% 99%) 0%, hsl(45 20% 95%) 100%);
+    --gradient-gold: linear-gradient(135deg, hsl(40 70% 50%) 0%, hsl(35 85% 55%) 100%);
+
+    /* Shadows */
+    --shadow-soft: 0 4px 20px -4px hsl(210 25% 15% / 0.08);
+    --shadow-card: 0 8px 30px -8px hsl(210 25% 15% / 0.12);
+    --shadow-glow: 0 0 40px hsl(160 60% 28% / 0.15);
+
+    --sidebar-background: 45 25% 98%;
+    --sidebar-foreground: 210 25% 15%;
+    --sidebar-primary: 160 60% 28%;
+    --sidebar-primary-foreground: 45 30% 97%;
+    --sidebar-accent: 45 20% 92%;
+    --sidebar-accent-foreground: 210 25% 15%;
+    --sidebar-border: 45 20% 88%;
+    --sidebar-ring: 160 60% 28%;
+  }
+
+  .dark {
+    --background: 210 30% 8%;
+    --foreground: 45 25% 95%;
+
+    --card: 210 25% 12%;
+    --card-foreground: 45 25% 95%;
+
+    --popover: 210 25% 12%;
+    --popover-foreground: 45 25% 95%;
+
+    --primary: 160 55% 45%;
+    --primary-foreground: 210 30% 8%;
+
+    --secondary: 40 65% 55%;
+    --secondary-foreground: 210 30% 8%;
+
+    --muted: 210 20% 18%;
+    --muted-foreground: 45 15% 65%;
+
+    --accent: 35 80% 60%;
+    --accent-foreground: 210 30% 8%;
+
+    --destructive: 0 62% 45%;
+    --destructive-foreground: 45 25% 95%;
+
+    --border: 210 20% 20%;
+    --input: 210 20% 20%;
+    --ring: 160 55% 45%;
+
+    --sidebar-background: 210 25% 10%;
+    --sidebar-foreground: 45 25% 95%;
+    --sidebar-primary: 160 55% 45%;
+    --sidebar-primary-foreground: 210 30% 8%;
+    --sidebar-accent: 210 20% 18%;
+    --sidebar-accent-foreground: 45 25% 95%;
+    --sidebar-border: 210 20% 20%;
+    --sidebar-ring: 160 55% 45%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-family: 'DM Sans', sans-serif;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Playfair Display', serif;
+  }
+}
+
+@layer utilities {
+  .font-display {
+    font-family: 'Playfair Display', serif;
+  }
+  
+  .font-body {
+    font-family: 'DM Sans', sans-serif;
+  }
+
+  .text-gradient {
+    @apply bg-clip-text text-transparent;
+    background-image: var(--gradient-hero);
+  }
+
+  .bg-hero-gradient {
+    background: var(--gradient-hero);
+  }
+
+  .bg-card-gradient {
+    background: var(--gradient-card);
+  }
+
+  .shadow-soft {
+    box-shadow: var(--shadow-soft);
+  }
+
+  .shadow-card {
+    box-shadow: var(--shadow-card);
+  }
+
+  .shadow-glow {
+    box-shadow: var(--shadow-glow);
+  }
+
+  /* Animations */
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes slide-up {
+    from {
+      opacity: 0;
+      transform: translateY(30px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes float {
+    0%, 100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-10px);
+    }
+  }
+
+  @keyframes shimmer {
+    0% {
+      background-position: -200% 0;
+    }
+    100% {
+      background-position: 200% 0;
+    }
+  }
+
+  .animate-fade-in {
+    animation: fade-in 0.6s ease-out forwards;
+  }
+
+  .animate-slide-up {
+    animation: slide-up 0.8s ease-out forwards;
+  }
+
+  .animate-float {
+    animation: float 4s ease-in-out infinite;
+  }
+
+  .animate-shimmer {
+    background: linear-gradient(
+      90deg,
+      hsl(var(--muted)) 0%,
+      hsl(var(--card)) 50%,
+      hsl(var(--muted)) 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 2s infinite;
+  }
+
+  /* Stagger children animations */
+  .stagger-children > * {
+    @apply animate-fade-in;
+    animation-fill-mode: both;
+  }
+
+  .stagger-children > *:nth-child(1) { animation-delay: 0.1s; }
+  .stagger-children > *:nth-child(2) { animation-delay: 0.2s; }
+  .stagger-children > *:nth-child(3) { animation-delay: 0.3s; }
+  .stagger-children > *:nth-child(4) { animation-delay: 0.4s; }
+  .stagger-children > *:nth-child(5) { animation-delay: 0.5s; }
+  .stagger-children > *:nth-child(6) { animation-delay: 0.6s; }
+}
