@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
+import { Navigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import type { User, AuthError } from '@supabase/supabase-js';
 import type { Profile } from '@/types/supabase';
@@ -32,10 +33,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       setUser(session?.user ?? null);
       if (session?.user) {
-        fetchProfile(session.user.id);
+        await fetchProfile(session.user.id);
       }
       setIsLoading(false);
     });
@@ -117,13 +118,11 @@ export function RequireAuth({
   }
 
   if (!user) {
-    window.location.href = fallbackPath;
-    return null;
+    return <Navigate to={fallbackPath} replace />;
   }
 
   if (role && profile?.role !== role) {
-    window.location.href = '/';
-    return null;
+    return <Navigate to="/" replace />;
   }
 
   return <>{children}</>;
