@@ -5,16 +5,8 @@ import { Book, Send, User, Sparkles, ArrowLeft, Search, Heart, Clock, PenLine, M
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
-
-interface Story {
-  id: string;
-  title: string;
-  author: string;
-  content: string;
-  likes: number;
-  publishedAt: string;
-  category: string;
-}
+import { useStories, useCreateStory } from "@/hooks/useStories";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface Message {
   id: string;
@@ -23,58 +15,12 @@ interface Message {
   timestamp: Date;
 }
 
-const demoStories: Story[] = [
-  {
-    id: "1",
-    title: "The Legend of Peer Channan",
-    author: "Ahmed Khan",
-    content: "In the heart of Punjab lies the ancient tale of Peer Channan, a saint whose wisdom and miracles are still remembered today. The story goes that during a great drought, he prayed for forty days and nights until the heavens opened...",
-    likes: 245,
-    publishedAt: "2025-01-05",
-    category: "Folklore",
-  },
-  {
-    id: "2",
-    title: "لاہور کی چڑیل کی داستان",
-    author: "فاطمہ زہرا",
-    content: "لاہور کے ہر پرانے محلے میں چڑیل کی اپنی کہانی ہے۔ اندرون شہر میں بزرگ لوگ بتاتے ہیں کہ پرانے برگد کے درخت کے پاس آدھی رات کو ایک عورت نظر آتی ہے جس کے پاؤں الٹے ہوتے ہیں...",
-    likes: 189,
-    publishedAt: "2025-01-03",
-    category: "Supernatural",
-  },
-  {
-    id: "3",
-    title: "ہیر رانجھے دی داستان",
-    author: "عثمان علی",
-    content: "پنجاب دی سب توں مشہور محبت دی کہانی۔ ہیر سیال تے دھیدو رانجھا دی ایہہ داستان ہر پنجابی دے دل وچ وسدی اے۔ رانجھے نے ہیر دی محبت وچ جوگی بن کے بانسری وجائی...",
-    likes: 312,
-    publishedAt: "2025-01-01",
-    category: "Folklore",
-  },
-  {
-    id: "4",
-    title: "The Flying Horse of Quaid",
-    author: "Usman Ali",
-    content: "Among the lesser-known stories of Karachi is the tale of a white horse that would appear on full moon nights near the Quaid's mausoleum. Witnesses claim it would gallop through the gardens before vanishing...",
-    likes: 156,
-    publishedAt: "2024-12-28",
-    category: "Urban Legends",
-  },
-  {
-    id: "5",
-    title: "سسی پنوں کی المناک محبت",
-    author: "عائشہ خان",
-    content: "بلوچستان کی وادیوں سے آنے والی یہ کہانی سسی اور پنوں کی لازوال محبت کی داستان ہے۔ سسی نے صحرا میں اپنے محبوب کو ڈھونڈتے ڈھونڈتے جان دے دی...",
-    likes: 278,
-    publishedAt: "2024-12-20",
-    category: "Folklore",
-  },
-];
-
 const StorytellingPage = () => {
   const { toast } = useToast();
+  const { user, profile } = useAuth();
+  const { data: stories = [] } = useStories({ status: 'published' });
+  const createStoryMutation = useCreateStory();
   const [activeTab, setActiveTab] = useState<"chat" | "stories" | "submit">("stories");
-  const [stories] = useState<Story[]>(demoStories);
   const [searchQuery, setSearchQuery] = useState("");
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -196,6 +142,15 @@ Just ask me about any of these, or share a myth you've heard! I'm here to narrat
   };
 
   const handleSubmitStory = () => {
+    if (!user) {
+      toast({
+        title: "Authentication Required",
+        description: "Please sign in to submit a story",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (!newStory.title.trim() || !newStory.content.trim()) {
       toast({
         title: "Missing Information",
@@ -205,13 +160,30 @@ Just ask me about any of these, or share a myth you've heard! I'm here to narrat
       return;
     }
 
-    toast({
-      title: "Story Submitted!",
-      description: "Your story has been submitted for review. It will be published once approved by admin.",
+    createStoryMutation.mutate({
+      title: newStory.title,
+      content: newStory.content,
+      author_name: profile?.name || 'Anonymous',
+      author_id: user.id,
+      category: newStory.category as any,
+      status: 'pending',
+    }, {
+      onSuccess: () => {
+        toast({
+          title: "Story Submitted!",
+          description: "Your story has been submitted for review. It will be published once approved by admin.",
+        });
+        setNewStory({ title: "", content: "", category: "Folklore" });
+        setActiveTab("stories");
+      },
+      onError: () => {
+        toast({
+          title: "Submission Failed",
+          description: "Something went wrong. Please try again.",
+          variant: "destructive",
+        });
+      },
     });
-
-    setNewStory({ title: "", content: "", category: "Folklore" });
-    setActiveTab("stories");
   };
 
   const filteredStories = stories.filter(
@@ -299,7 +271,7 @@ Just ask me about any of these, or share a myth you've heard! I'm here to narrat
                       </span>
                       <span className="text-xs text-muted-foreground flex items-center gap-1">
                         <Clock className="w-3 h-3" />
-                        {story.publishedAt}
+                        {story.published_at}
                       </span>
                     </div>
 
@@ -316,7 +288,7 @@ Just ask me about any of these, or share a myth you've heard! I'm here to narrat
                         <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center">
                           <User className="w-3 h-3 text-primary" />
                         </div>
-                        <span className="text-sm text-foreground">{story.author}</span>
+                        <span className="text-sm text-foreground">{story.author_name}</span>
                       </div>
 
                       <div className="flex items-center gap-3">

@@ -1,8 +1,8 @@
 import { Menu, X } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useLanguage, Language } from "@/contexts/LanguageContext";
+import { UserMenu } from "@/components/UserMenu";
 
 const languages: { code: Language; label: string }[] = [
   { code: "en", label: "English" },
@@ -76,12 +76,10 @@ export const Navbar = () => {
               ))}
             </div>
 
-            {/* Admin Link */}
-            <Link to="/admin">
-              <Button variant="outline" size="sm" className="hidden md:flex">
-                {t("nav.admin")}
-              </Button>
-            </Link>
+            {/* User Menu */}
+            <div className="hidden md:flex">
+              <UserMenu />
+            </div>
 
             {/* Mobile Menu Toggle */}
             <button
@@ -111,13 +109,9 @@ export const Navbar = () => {
                   {link.label}
                 </Link>
               ))}
-              <Link
-                to="/admin"
-                onClick={() => setIsMenuOpen(false)}
-                className="px-4 py-3 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted"
-              >
-                {t("nav.adminDashboard")}
-              </Link>
+              <div className="px-4 py-2">
+                <UserMenu />
+              </div>
             </div>
             
             {/* Mobile Language Switcher */}
