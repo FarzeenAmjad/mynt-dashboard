@@ -1,77 +1,141 @@
-import { useState } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
-import { Bot, Send, User, Sparkles, ArrowLeft } from "lucide-react";
+import { Bot, Send, User, Sparkles, ArrowLeft, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Link } from "react-router-dom";
+import ReactMarkdown from "react-markdown";
+import { createChatSession, sendMessageStreaming } from "@/services/gemini";
 
 interface Message {
   id: string;
   role: "user" | "bot";
   content: string;
   timestamp: Date;
+  isStreaming?: boolean;
 }
 
-const demoResponses = [
-  {
-    trigger: "rice",
-    response: `❌ **Debunked**\n\nThe myth that eating rice at night causes weight gain is **not supported by scientific evidence**.\n\n**Key Points:**\n- Weight gain depends on total caloric intake vs. expenditure\n- Your metabolism continues while sleeping\n- Rice is a nutritious complex carbohydrate\n\n**Sources:** WHO, Ministry of Health Pakistan`,
-  },
-  {
-    trigger: "black cat",
-    response: `❌ **Debunked**\n\nThe belief that black cats bring bad luck is a **superstition with no factual basis**.\n\n**Key Points:**\n- This is a cultural superstition, not fact\n- In many cultures, black cats are considered lucky\n- There's no causal relationship between cats and fortune\n\n**Sources:** Cultural anthropology studies`,
-  },
-  {
-    trigger: "milk fish",
-    response: `❌ **Debunked**\n\nThe claim that drinking milk with fish causes skin diseases like vitiligo is **completely false**.\n\n**Key Points:**\n- No scientific evidence supports this claim\n- Vitiligo is an autoimmune condition, not dietary\n- Many cultures safely consume fish and dairy together\n\n**Sources:** American Academy of Dermatology`,
-  },
+const SUGGESTED_QUESTIONS = [
+  { emoji: "\u{1F35A}", text: "Is eating rice at night unhealthy?" },
+  { emoji: "\u{1F408}\u200D\u2B1B", text: "Do black cats bring bad luck?" },
+  { emoji: "\u{1F95B}", text: "Can mixing milk and fish cause skin disease?" },
+  { emoji: "\u{1FA9E}", text: "Is breaking a mirror 7 years of bad luck?" },
+  { emoji: "\u{270B}", text: "Does cracking knuckles cause arthritis?" },
+  { emoji: "\u{1F522}", text: "Is the number 13 really unlucky in Pakistan?" },
 ];
 
+const INITIAL_MESSAGE: Message = {
+  id: "welcome",
+  role: "bot",
+  content:
+    "Assalamu Alaikum! \u{1F31F} I'm the **Pakistani Myth Guider AI** — your fact-checking companion for Pakistani myths, superstitions, and cultural beliefs.\n\nAsk me about any myth in **English**, **\u0627\u0631\u062F\u0648**, or **\u067E\u0646\u062C\u0627\u0628\u06CC** and I'll verify it with credible sources.\n\nTry one of the suggestions below, or type your own question!",
+  timestamp: new Date(),
+};
+
 const ChatbotPage = () => {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: "1",
-      role: "bot",
-      content: "Hello! I'm your AI fact-checker. Ask me about any myth or belief you'd like to verify. I can help debunk misconceptions in English, اردو, or پنجابی.",
-      timestamp: new Date(),
-    },
-  ]);
+  const [messages, setMessages] = useState<Message[]>([INITIAL_MESSAGE]);
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
+  const chatSessionRef = useRef<ReturnType<typeof createChatSession> | null>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  const handleSend = async () => {
-    if (!input.trim()) return;
+  // Initialize chat session on mount
+  useEffect(() => {
+    chatSessionRef.current = createChatSession();
+  }, []);
 
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      role: "user",
-      content: input,
-      timestamp: new Date(),
-    };
+  // Auto-scroll to bottom on new messages
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages, isTyping]);
 
-    setMessages((prev) => [...prev, userMessage]);
-    setInput("");
-    setIsTyping(true);
-
-    // Simulate AI response
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-
-    const matchedResponse = demoResponses.find((r) =>
-      input.toLowerCase().includes(r.trigger)
-    );
-
-    const botMessage: Message = {
-      id: (Date.now() + 1).toString(),
-      role: "bot",
-      content:
-        matchedResponse?.response ||
-        `I'm analyzing your query about "${input}".\n\n⚠️ **Under Review**\n\nThis myth is currently being researched by our team. In the meantime, I recommend checking credible sources like WHO or local health ministry websites.\n\nWould you like me to search for related myths in our database?`,
-      timestamp: new Date(),
-    };
-
-    setMessages((prev) => [...prev, botMessage]);
-    setIsTyping(false);
+  // Auto-resize textarea
+  const handleTextareaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setInput(e.target.value);
+    const textarea = e.target;
+    textarea.style.height = "auto";
+    textarea.style.height = Math.min(textarea.scrollHeight, 120) + "px";
   };
+
+  const handleSend = useCallback(
+    async (overrideMessage?: string) => {
+      const messageText = overrideMessage || input.trim();
+      if (!messageText || isTyping) return;
+
+      // Add user message
+      const userMessage: Message = {
+        id: Date.now().toString(),
+        role: "user",
+        content: messageText,
+        timestamp: new Date(),
+      };
+
+      setMessages((prev) => [...prev, userMessage]);
+      setInput("");
+      if (textareaRef.current) {
+        textareaRef.current.style.height = "auto";
+      }
+      setIsTyping(true);
+
+      // Create bot placeholder
+      const botId = (Date.now() + 1).toString();
+      const botMessage: Message = {
+        id: botId,
+        role: "bot",
+        content: "",
+        timestamp: new Date(),
+        isStreaming: true,
+      };
+      setMessages((prev) => [...prev, botMessage]);
+
+      try {
+        if (!chatSessionRef.current) {
+          chatSessionRef.current = createChatSession();
+        }
+
+        const stream = sendMessageStreaming(chatSessionRef.current, messageText);
+        for await (const chunk of stream) {
+          setMessages((prev) =>
+            prev.map((msg) =>
+              msg.id === botId ? { ...msg, content: msg.content + chunk } : msg
+            )
+          );
+        }
+      } catch (error) {
+        console.error("Gemini API error:", error);
+        setMessages((prev) =>
+          prev.map((msg) =>
+            msg.id === botId
+              ? {
+                  ...msg,
+                  content:
+                    "I'm sorry, I encountered an error while processing your request. Please try again in a moment. \u{1F64F}",
+                }
+              : msg
+          )
+        );
+      } finally {
+        setMessages((prev) =>
+          prev.map((msg) =>
+            msg.id === botId ? { ...msg, isStreaming: false } : msg
+          )
+        );
+        setIsTyping(false);
+      }
+    },
+    [input, isTyping]
+  );
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
+    }
+  };
+
+  const showSuggestions = messages.length <= 1;
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -80,89 +144,187 @@ const ChatbotPage = () => {
       <main className="flex-1 pt-20 lg:pt-24 pb-4 flex flex-col">
         <div className="container mx-auto px-4 flex-1 flex flex-col max-w-4xl">
           {/* Header */}
-          <div className="flex items-center gap-4 mb-6">
-            <Link to="/" className="p-2 hover:bg-muted rounded-lg transition-colors">
+          <div className="flex items-center gap-4 mb-4 animate-fade-in">
+            <Link
+              to="/"
+              className="p-2 hover:bg-muted rounded-lg transition-colors"
+            >
               <ArrowLeft className="w-5 h-5 text-muted-foreground" />
             </Link>
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-xl bg-primary flex items-center justify-center">
-                <Bot className="w-6 h-6 text-primary-foreground" />
+              <div className="relative">
+                <div className="w-12 h-12 rounded-xl bg-primary ring-2 ring-secondary shadow-lg flex items-center justify-center">
+                  <Bot className="w-6 h-6 text-primary-foreground" />
+                </div>
+                <span className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-verified border-2 border-background" />
               </div>
               <div>
-                <h1 className="font-display text-xl font-semibold text-foreground">Fact-Check Chatbot</h1>
-                <div className="flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-verified animate-pulse" />
-                  <span className="text-sm text-muted-foreground">AI-Powered Verification</span>
+                <h1 className="font-display text-xl font-semibold text-foreground">
+                  Myth Guider AI
+                </h1>
+                <div className="flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-verified animate-pulse" />
+                  <span className="text-xs text-muted-foreground">
+                    Online &middot; Powered by Gemini
+                  </span>
                 </div>
               </div>
             </div>
           </div>
 
           {/* Chat Container */}
-          <div className="flex-1 bg-card rounded-2xl shadow-soft flex flex-col overflow-hidden">
-            {/* Messages */}
-            <div className="flex-1 overflow-y-auto p-4 lg:p-6 space-y-4">
-              {messages.map((message) => (
-                <div
-                  key={message.id}
-                  className={`flex gap-3 ${message.role === "user" ? "justify-end" : ""}`}
-                >
-                  {message.role === "bot" && (
-                    <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center flex-shrink-0">
-                      <Bot className="w-4 h-4 text-primary-foreground" />
-                    </div>
-                  )}
+          <div className="flex-1 bg-card rounded-2xl shadow-card flex flex-col overflow-hidden relative border border-border/50">
+            {/* Subtle Islamic geometric pattern overlay */}
+            <div
+              className="absolute inset-0 pointer-events-none opacity-[0.025]"
+              style={{
+                backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23166534' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
+              }}
+            />
+
+            {/* Messages Area */}
+            <ScrollArea className="flex-1">
+              <div className="p-4 lg:p-6 space-y-4 relative">
+                {/* Messages */}
+                {messages.map((message) => (
                   <div
-                    className={`max-w-[80%] px-4 py-3 rounded-2xl ${
-                      message.role === "user"
-                        ? "bg-primary text-primary-foreground rounded-tr-md"
-                        : "bg-muted text-foreground rounded-tl-md"
+                    key={message.id}
+                    className={`flex gap-3 animate-fade-in ${
+                      message.role === "user" ? "justify-end" : ""
                     }`}
                   >
-                    <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                    {/* Bot avatar */}
+                    {message.role === "bot" && (
+                      <div className="w-8 h-8 rounded-lg bg-primary ring-1 ring-secondary/50 flex items-center justify-center flex-shrink-0 shadow-sm">
+                        <Bot className="w-4 h-4 text-primary-foreground" />
+                      </div>
+                    )}
+
+                    {/* Message bubble */}
+                    <div
+                      className={`max-w-[85%] lg:max-w-[75%] ${
+                        message.role === "user"
+                          ? "bg-primary text-primary-foreground rounded-2xl rounded-tr-sm px-4 py-3 shadow-sm"
+                          : "bg-muted/60 text-foreground rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm border border-border/30"
+                      }`}
+                    >
+                      {message.role === "bot" ? (
+                        <div className="prose prose-sm max-w-none prose-headings:text-foreground prose-p:text-foreground prose-strong:text-foreground prose-li:text-foreground prose-a:text-primary">
+                          <ReactMarkdown>{message.content}</ReactMarkdown>
+                          {message.isStreaming && (
+                            <span className="inline-block w-1.5 h-4 bg-primary ml-0.5 animate-pulse rounded-sm" />
+                          )}
+                        </div>
+                      ) : (
+                        <p className="text-sm whitespace-pre-wrap leading-relaxed">
+                          {message.content}
+                        </p>
+                      )}
+                      <p
+                        className={`text-[10px] mt-1.5 ${
+                          message.role === "user"
+                            ? "text-primary-foreground/60"
+                            : "text-muted-foreground/60"
+                        }`}
+                      >
+                        {message.timestamp.toLocaleTimeString([], {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </p>
+                    </div>
+
+                    {/* User avatar */}
+                    {message.role === "user" && (
+                      <div className="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center flex-shrink-0 shadow-sm">
+                        <User className="w-4 h-4 text-secondary-foreground" />
+                      </div>
+                    )}
                   </div>
-                  {message.role === "user" && (
-                    <div className="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center flex-shrink-0">
-                      <User className="w-4 h-4 text-secondary-foreground" />
+                ))}
+
+                {/* Typing indicator */}
+                {isTyping &&
+                  !messages[messages.length - 1]?.isStreaming && (
+                    <div className="flex gap-3 animate-fade-in">
+                      <div className="w-8 h-8 rounded-lg bg-primary ring-1 ring-secondary/50 flex items-center justify-center flex-shrink-0 shadow-sm">
+                        <Bot className="w-4 h-4 text-primary-foreground" />
+                      </div>
+                      <div className="bg-muted/60 px-4 py-3 rounded-2xl rounded-tl-sm border border-border/30">
+                        <div className="flex gap-1.5 items-center h-5">
+                          <span
+                            className="w-2 h-2 rounded-full bg-primary animate-bounce"
+                            style={{ animationDelay: "0ms" }}
+                          />
+                          <span
+                            className="w-2 h-2 rounded-full bg-primary animate-bounce"
+                            style={{ animationDelay: "150ms" }}
+                          />
+                          <span
+                            className="w-2 h-2 rounded-full bg-primary animate-bounce"
+                            style={{ animationDelay: "300ms" }}
+                          />
+                        </div>
+                      </div>
                     </div>
                   )}
-                </div>
-              ))}
 
-              {isTyping && (
-                <div className="flex gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center flex-shrink-0">
-                    <Bot className="w-4 h-4 text-primary-foreground" />
-                  </div>
-                  <div className="bg-muted px-4 py-3 rounded-2xl rounded-tl-md">
-                    <div className="flex gap-1">
-                      <span className="w-2 h-2 rounded-full bg-muted-foreground animate-bounce" style={{ animationDelay: "0ms" }} />
-                      <span className="w-2 h-2 rounded-full bg-muted-foreground animate-bounce" style={{ animationDelay: "150ms" }} />
-                      <span className="w-2 h-2 rounded-full bg-muted-foreground animate-bounce" style={{ animationDelay: "300ms" }} />
+                {/* Suggested Questions */}
+                {showSuggestions && (
+                  <div className="pt-4 animate-fade-in">
+                    <div className="flex items-center gap-2 mb-3">
+                      <MessageCircle className="w-4 h-4 text-secondary" />
+                      <span className="text-sm font-medium text-muted-foreground">
+                        Popular myths to explore
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                      {SUGGESTED_QUESTIONS.map((q) => (
+                        <button
+                          key={q.text}
+                          onClick={() => handleSend(q.text)}
+                          disabled={isTyping}
+                          className="p-3 rounded-xl border border-border bg-background/80 hover:bg-muted hover:border-primary/30 hover:shadow-sm transition-all duration-200 text-left text-sm group disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          <span className="text-base mr-2">{q.emoji}</span>
+                          <span className="text-foreground/80 group-hover:text-primary transition-colors">
+                            {q.text}
+                          </span>
+                        </button>
+                      ))}
                     </div>
                   </div>
-                </div>
-              )}
-            </div>
+                )}
 
-            {/* Input */}
-            <div className="p-4 border-t border-border">
-              <div className="flex gap-3">
-                <input
-                  type="text"
+                <div ref={messagesEndRef} />
+              </div>
+            </ScrollArea>
+
+            {/* Input Area */}
+            <div className="p-4 border-t border-border/50 bg-card/80 backdrop-blur-sm">
+              <div className="flex gap-2 items-end">
+                <textarea
+                  ref={textareaRef}
                   value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && handleSend()}
-                  placeholder="Ask about a myth... (e.g., 'Is eating rice at night bad?')"
-                  className="flex-1 px-4 py-3 rounded-xl bg-muted border border-border focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none"
+                  onChange={handleTextareaChange}
+                  onKeyDown={handleKeyDown}
+                  placeholder="Ask about any Pakistani myth or belief..."
+                  rows={1}
+                  disabled={isTyping}
+                  className="flex-1 px-4 py-3 rounded-xl bg-muted/50 border border-border focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none resize-none text-sm transition-all duration-200 disabled:opacity-50 min-h-[44px] max-h-[120px]"
                 />
-                <Button onClick={handleSend} disabled={!input.trim() || isTyping} size="lg">
-                  <Send className="w-5 h-5" />
+                <Button
+                  onClick={() => handleSend()}
+                  disabled={!input.trim() || isTyping}
+                  size="lg"
+                  className="rounded-xl h-[44px] w-[44px] p-0 shrink-0 shadow-sm"
+                >
+                  <Send className="w-4 h-4" />
                 </Button>
               </div>
-              <p className="text-xs text-muted-foreground mt-2 text-center">
+              <p className="text-[11px] text-muted-foreground/60 mt-2 text-center">
                 <Sparkles className="w-3 h-3 inline mr-1" />
-                Powered by AI • Responses verified by credible sources
+                Powered by Gemini AI &middot; Responses may not always be accurate
               </p>
             </div>
           </div>
