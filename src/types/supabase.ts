@@ -145,6 +145,40 @@ export type Database = {
           status?: 'approved' | 'pending';
         };
       };
+      myth_submissions: {
+        Row: {
+          id: string;
+          title: string;
+          description: string;
+          category: 'Health' | 'Cultural' | 'Historical' | 'Social';
+          source_url: string | null;
+          submitted_by: string | null;
+          submitter_name: string;
+          status: 'pending' | 'approved' | 'rejected';
+          admin_notes: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          title: string;
+          description: string;
+          category: 'Health' | 'Cultural' | 'Historical' | 'Social';
+          source_url?: string | null;
+          submitted_by?: string | null;
+          submitter_name: string;
+          status?: 'pending' | 'approved' | 'rejected';
+          admin_notes?: string | null;
+        };
+        Update: {
+          title?: string;
+          description?: string;
+          category?: 'Health' | 'Cultural' | 'Historical' | 'Social';
+          source_url?: string | null;
+          status?: 'pending' | 'approved' | 'rejected';
+          admin_notes?: string | null;
+        };
+      };
       votes: {
         Row: {
           id: string;
@@ -194,3 +228,6 @@ export type MythUpdate = Database['public']['Tables']['myths']['Update'];
 export type StoryInsert = Database['public']['Tables']['stories']['Insert'];
 export type StoryUpdate = Database['public']['Tables']['stories']['Update'];
 export type CommentInsert = Database['public']['Tables']['comments']['Insert'];
+export type MythSubmission = Database['public']['Tables']['myth_submissions']['Row'];
+export type MythSubmissionInsert = Database['public']['Tables']['myth_submissions']['Insert'];
+export type MythSubmissionUpdate = Database['public']['Tables']['myth_submissions']['Update'];

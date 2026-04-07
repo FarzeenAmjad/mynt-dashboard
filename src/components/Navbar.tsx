@@ -20,6 +20,7 @@ export const Navbar = () => {
     { href: "/categories", label: t("nav.categories") },
     { href: "/trending", label: t("nav.trending") },
     { href: "/chatbot", label: t("nav.chatbot") },
+    { href: "/submit", label: t("nav.submit") },
     { href: "/about", label: t("nav.about") },
   ];
 

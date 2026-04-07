@@ -18,6 +18,7 @@ import {
   X,
   Settings,
   Book,
+  Inbox,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -26,8 +27,9 @@ import { useMyths, useCreateMyth, useDeleteMyth } from "@/hooks/useMyths";
 import { useStories, useCreateStory, useUpdateStory, useDeleteStory } from "@/hooks/useStories";
 import { useAllComments, useApproveComment, useDeleteComment } from "@/hooks/useComments";
 import { useProfiles } from "@/hooks/useProfiles";
+import { useMythSubmissions, useUpdateMythSubmission, useDeleteMythSubmission } from "@/hooks/useMythSubmissions";
 
-type TabType = "dashboard" | "myths" | "stories" | "comments" | "users";
+type TabType = "dashboard" | "myths" | "stories" | "submissions" | "comments" | "users";
 
 const statusConfig = {
   verified: { icon: CheckCircle, label: "Verified", color: "text-verified", bg: "bg-verified/10" },
@@ -50,6 +52,7 @@ const AdminDashboard = () => {
   const { data: stories = [], isLoading: storiesLoading } = useStories();
   const { data: comments = [], isLoading: commentsLoading } = useAllComments();
   const { data: users = [], isLoading: usersLoading } = useProfiles();
+  const { data: submissions = [], isLoading: submissionsLoading } = useMythSubmissions();
 
   // Mutations
   const createMythMutation = useCreateMyth();
@@ -59,6 +62,8 @@ const AdminDashboard = () => {
   const deleteStoryMutation = useDeleteStory();
   const approveCommentMutation = useApproveComment();
   const deleteCommentMutation = useDeleteComment();
+  const updateSubmissionMutation = useUpdateMythSubmission();
+  const deleteSubmissionMutation = useDeleteMythSubmission();
 
   const handleLogout = async () => {
     await signOut();
@@ -94,10 +99,32 @@ const AdminDashboard = () => {
     toast({ title: "Story deleted", description: "The story has been removed." });
   };
 
+  const handleApproveSubmission = async (submission: typeof submissions[0]) => {
+    await createMythMutation.mutateAsync({
+      title: submission.title,
+      summary: submission.description,
+      category: submission.category as 'Health' | 'Cultural' | 'Historical' | 'Social',
+      published_at: new Date().toISOString(),
+    });
+    await updateSubmissionMutation.mutateAsync({ id: submission.id, updates: { status: 'approved' } });
+    toast({ title: "Submission approved", description: "A new myth has been created from this submission." });
+  };
+
+  const handleRejectSubmission = async (id: string) => {
+    await updateSubmissionMutation.mutateAsync({ id, updates: { status: 'rejected' } });
+    toast({ title: "Submission rejected", description: "The submission has been rejected." });
+  };
+
+  const handleDeleteSubmission = async (id: string) => {
+    await deleteSubmissionMutation.mutateAsync(id);
+    toast({ title: "Submission deleted", description: "The submission has been removed." });
+  };
+
   const navItems = [
     { id: "dashboard" as TabType, label: "Dashboard", icon: LayoutDashboard },
     { id: "myths" as TabType, label: "Manage Myths", icon: BookOpen },
     { id: "stories" as TabType, label: "Stories", icon: Book },
+    { id: "submissions" as TabType, label: "Submissions", icon: Inbox },
     { id: "comments" as TabType, label: "Comments", icon: MessageSquare },
     { id: "users" as TabType, label: "Users", icon: Users },
   ];
@@ -105,11 +132,12 @@ const AdminDashboard = () => {
   const stats = [
     { label: "Total Myths", value: myths.length, icon: BookOpen, color: "bg-primary" },
     { label: "Published Stories", value: stories.filter((s) => s.status === "published").length, icon: Book, color: "bg-secondary" },
+    { label: "Pending Submissions", value: submissions.filter((s) => s.status === "pending").length, icon: Inbox, color: "bg-accent" },
     { label: "Pending Comments", value: comments.filter((c) => c.status === "pending").length, icon: MessageSquare, color: "bg-partial" },
     { label: "Total Users", value: users.length, icon: Users, color: "bg-emerald-light" },
   ];
 
-  const isLoading = mythsLoading || storiesLoading || commentsLoading || usersLoading;
+  const isLoading = mythsLoading || storiesLoading || commentsLoading || usersLoading || submissionsLoading;
 
   return (
     <div className="min-h-screen bg-muted flex">
@@ -428,6 +456,76 @@ const AdminDashboard = () => {
                                 </td>
                               </tr>
                             ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Submissions Tab */}
+              {activeTab === "submissions" && (
+                <div className="space-y-6">
+                  <div className="bg-card rounded-2xl shadow-soft overflow-hidden">
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead className="bg-muted">
+                          <tr>
+                            <th className="text-left text-sm font-medium text-muted-foreground px-6 py-4">Title</th>
+                            <th className="text-left text-sm font-medium text-muted-foreground px-6 py-4">Submitter</th>
+                            <th className="text-left text-sm font-medium text-muted-foreground px-6 py-4">Category</th>
+                            <th className="text-left text-sm font-medium text-muted-foreground px-6 py-4">Status</th>
+                            <th className="text-left text-sm font-medium text-muted-foreground px-6 py-4">Date</th>
+                            <th className="text-right text-sm font-medium text-muted-foreground px-6 py-4">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {submissions.map((sub) => (
+                            <tr key={sub.id} className="border-t border-border hover:bg-muted/50">
+                              <td className="px-6 py-4">
+                                <div>
+                                  <span className="text-sm font-medium text-foreground">{sub.title}</span>
+                                  <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{sub.description}</p>
+                                </div>
+                              </td>
+                              <td className="px-6 py-4"><span className="text-sm text-muted-foreground">{sub.submitter_name}</span></td>
+                              <td className="px-6 py-4"><span className="text-sm text-muted-foreground">{sub.category}</span></td>
+                              <td className="px-6 py-4">
+                                <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-medium ${
+                                  sub.status === "approved" ? "bg-verified/10 text-verified"
+                                    : sub.status === "rejected" ? "bg-destructive/10 text-destructive"
+                                    : "bg-partial/10 text-partial"
+                                }`}>
+                                  {sub.status}
+                                </span>
+                              </td>
+                              <td className="px-6 py-4"><span className="text-sm text-muted-foreground">{sub.created_at?.split("T")[0]}</span></td>
+                              <td className="px-6 py-4">
+                                <div className="flex items-center justify-end gap-2">
+                                  {sub.status === "pending" && (
+                                    <>
+                                      <button onClick={() => handleApproveSubmission(sub)} className="p-2 hover:bg-verified/10 rounded-lg transition-colors" title="Approve & create myth">
+                                        <CheckCircle className="w-4 h-4 text-verified" />
+                                      </button>
+                                      <button onClick={() => handleRejectSubmission(sub.id)} className="p-2 hover:bg-destructive/10 rounded-lg transition-colors" title="Reject">
+                                        <XCircle className="w-4 h-4 text-destructive" />
+                                      </button>
+                                    </>
+                                  )}
+                                  <button onClick={() => handleDeleteSubmission(sub.id)} className="p-2 hover:bg-destructive/10 rounded-lg transition-colors" title="Delete">
+                                    <Trash2 className="w-4 h-4 text-destructive" />
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                          {submissions.length === 0 && (
+                            <tr>
+                              <td colSpan={6} className="px-6 py-8 text-center text-sm text-muted-foreground">
+                                No submissions yet.
+                              </td>
+                            </tr>
+                          )}
                         </tbody>
                       </table>
                     </div>

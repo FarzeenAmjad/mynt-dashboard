@@ -17,6 +17,7 @@ import StoryDetail from "./pages/StoryDetail";
 import CategoriesPage from "./pages/CategoriesPage";
 import TrendingPage from "./pages/TrendingPage";
 import AboutPage from "./pages/AboutPage";
+import SubmitMythPage from "./pages/SubmitMythPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -50,6 +51,7 @@ const App = () => (
               <Route path="/categories/:category" element={<CategoriesPage />} />
               <Route path="/trending" element={<TrendingPage />} />
               <Route path="/about" element={<AboutPage />} />
+              <Route path="/submit" element={<SubmitMythPage />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
