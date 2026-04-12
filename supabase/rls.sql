@@ -69,6 +69,13 @@ create policy "Admins and moderators see all stories"
     exists (select 1 from public.profiles where id = auth.uid() and role in ('admin', 'moderator'))
   );
 
+-- Users can see their own stories (including their own pending submissions).
+-- Required so that `.insert().select()` in createStory() can return the row
+-- immediately after insert — otherwise PostgREST blocks the returning-SELECT
+-- with 403 since pending rows aren't visible under the published/admin policies.
+create policy "Users can view their own stories"
+  on public.stories for select using (auth.uid() = author_id);
+
 -- Authenticated users can submit stories
 create policy "Authenticated users can submit stories"
   on public.stories for insert with check (auth.uid() is not null);
