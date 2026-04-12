@@ -5,15 +5,16 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useRef, useEffect, useMemo } from "react";
 import { createAvatar } from "@dicebear/core";
-import { adventurer, avataaars, bottts, lorelei, notionists, thumbs } from "@dicebear/collection";
+import {
+  adventurer, avataaars, bigEars, bigSmile, bottts, croodles,
+  dylan, funEmoji, lorelei, micah, miniavs, notionists,
+  openPeeps, personas, pixelArt, thumbs,
+} from "@dicebear/collection";
 
 const STYLE_MAP: Record<string, any> = {
-  adventurer,
-  avataaars,
-  bottts,
-  lorelei,
-  notionists,
-  thumbs,
+  adventurer, avataaars, bigEars, bigSmile, bottts, croodles,
+  dylan, funEmoji, lorelei, micah, miniavs, notionists,
+  openPeeps, personas, pixelArt, thumbs,
 };
 
 export const UserMenu = () => {

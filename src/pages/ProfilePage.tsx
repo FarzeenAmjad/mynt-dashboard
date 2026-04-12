@@ -8,14 +8,28 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { updateProfile } from "@/services/profiles";
 import { createAvatar } from "@dicebear/core";
-import { adventurer, avataaars, bottts, lorelei, notionists, thumbs } from "@dicebear/collection";
+import {
+  adventurer, avataaars, bigEars, bigSmile, bottts, croodles,
+  dylan, funEmoji, lorelei, micah, miniavs, notionists,
+  openPeeps, personas, pixelArt, thumbs,
+} from "@dicebear/collection";
 
 const AVATAR_STYLES = [
   { name: "adventurer", label: "Explorer", style: adventurer },
   { name: "avataaars", label: "Cartoon", style: avataaars },
+  { name: "bigEars", label: "Big Ears", style: bigEars },
+  { name: "bigSmile", label: "Big Smile", style: bigSmile },
   { name: "bottts", label: "Robot", style: bottts },
+  { name: "croodles", label: "Doodle", style: croodles },
+  { name: "dylan", label: "Dylan", style: dylan },
+  { name: "funEmoji", label: "Emoji", style: funEmoji },
   { name: "lorelei", label: "Elegant", style: lorelei },
+  { name: "micah", label: "Micah", style: micah },
+  { name: "miniavs", label: "Mini", style: miniavs },
   { name: "notionists", label: "Minimal", style: notionists },
+  { name: "openPeeps", label: "Peeps", style: openPeeps },
+  { name: "personas", label: "Persona", style: personas },
+  { name: "pixelArt", label: "Pixel", style: pixelArt },
   { name: "thumbs", label: "Playful", style: thumbs },
 ] as const;
 
@@ -111,7 +125,7 @@ const ProfilePage = () => {
               <div>
                 <h2 className="text-sm font-semibold text-foreground mb-1">Choose your avatar</h2>
                 <p className="text-xs text-muted-foreground mb-4">Select a style — your unique avatar is generated from your email.</p>
-                <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
+                <div className="grid grid-cols-4 sm:grid-cols-8 gap-3">
                   {avatarPreviews.map((av) => (
                     <button
                       key={av.name}
