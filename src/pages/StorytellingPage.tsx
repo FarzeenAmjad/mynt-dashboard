@@ -1,19 +1,39 @@
-import { useState } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { Navbar } from "@/components/Navbar";
-import { Footer } from "@/components/Footer";
-import { Book, Send, User, Sparkles, ArrowLeft, Search, Heart, Clock, PenLine, MessageCircle } from "lucide-react";
+import { Book, Send, User, Sparkles, ArrowLeft, Search, Heart, Clock, PenLine, MessageCircle, BookOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Link } from "react-router-dom";
+import ReactMarkdown from "react-markdown";
 import { useToast } from "@/hooks/use-toast";
 import { useStories, useCreateStory } from "@/hooks/useStories";
 import { useAuth } from "@/contexts/AuthContext";
+import { createStorytellerSession, sendStoryStreaming } from "@/services/storyteller";
 
 interface Message {
   id: string;
   role: "user" | "bot";
   content: string;
   timestamp: Date;
+  isStreaming?: boolean;
 }
+
+const SUGGESTED_STORIES = [
+  { emoji: "🌹", text: "Tell me the tale of Heer Ranjha" },
+  { emoji: "👻", text: "Share a Jinn story from Pakistani folklore" },
+  { emoji: "💔", text: "Narrate Sohni Mahiwal's tragic love story" },
+  { emoji: "🏔️", text: "Tell me legends of the Karakoram mountains" },
+  { emoji: "🌙", text: "Share a Sufi saint's mystical tale" },
+  { emoji: "🐍", text: "Tell me the legend of Sassi Punnu" },
+];
+
+const INITIAL_MESSAGE: Message = {
+  id: "welcome",
+  role: "bot",
+  content:
+    "Assalam-o-Alaikum! 🌙 I'm the **Pakistani Folklore Storyteller** — your companion for tales of love, mystery, and wonder from across Pakistan.\n\nAsk me to narrate legendary stories in **English**, **اردو**, or **پنجابی**.\n\nChoose a tale below, or ask about any myth or legend!",
+  timestamp: new Date(),
+};
 
 const StorytellingPage = () => {
   const { toast } = useToast();
@@ -22,16 +42,14 @@ const StorytellingPage = () => {
   const createStoryMutation = useCreateStory();
   const [activeTab, setActiveTab] = useState<"chat" | "stories" | "submit">("stories");
   const [searchQuery, setSearchQuery] = useState("");
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: "1",
-      role: "bot",
-      content: "Assalam-o-Alaikum! I'm your storytelling companion. Ask me to tell you tales from Pakistani folklore, myths, and legends. I can narrate stories in English, اردو, or پنجابی.",
-      timestamp: new Date(),
-    },
-  ]);
+
+  // Chat state
+  const [messages, setMessages] = useState<Message[]>([INITIAL_MESSAGE]);
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
+  const chatSessionRef = useRef<ReturnType<typeof createStorytellerSession> | null>(null);
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Story submission form
   const [newStory, setNewStory] = useState({
@@ -40,106 +58,103 @@ const StorytellingPage = () => {
     category: "Folklore",
   });
 
-  const handleSend = async () => {
-    if (!input.trim()) return;
+  // Initialize chat session
+  useEffect(() => {
+    chatSessionRef.current = createStorytellerSession();
+  }, []);
 
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      role: "user",
-      content: input,
-      timestamp: new Date(),
-    };
+  // Auto-scroll chat area
+  useEffect(() => {
+    const viewport = scrollAreaRef.current?.querySelector(
+      "[data-radix-scroll-area-viewport]"
+    );
+    if (viewport) {
+      viewport.scrollTop = viewport.scrollHeight;
+    }
+  }, [messages, isTyping]);
 
-    setMessages((prev) => [...prev, userMessage]);
-    setInput("");
-    setIsTyping(true);
-
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-
-    const botResponse = getBotResponse(input);
-    const botMessage: Message = {
-      id: (Date.now() + 1).toString(),
-      role: "bot",
-      content: botResponse,
-      timestamp: new Date(),
-    };
-
-    setMessages((prev) => [...prev, botMessage]);
-    setIsTyping(false);
+  const handleTextareaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setInput(e.target.value);
+    const textarea = e.target;
+    textarea.style.height = "auto";
+    textarea.style.height = Math.min(textarea.scrollHeight, 120) + "px";
   };
 
-  const getBotResponse = (query: string): string => {
-    const q = query.toLowerCase();
-    
-    if (q.includes("heer") || q.includes("ranjha")) {
-      return `📖 **The Timeless Tale of Heer Ranjha**
+  const handleSend = useCallback(
+    async (overrideMessage?: string) => {
+      const messageText = overrideMessage || input.trim();
+      if (!messageText || isTyping) return;
 
-Heer Ranjha is Pakistan's most beloved romantic tragedy, penned by the great Waris Shah in 1766.
+      const userMessage: Message = {
+        id: Date.now().toString(),
+        role: "user",
+        content: messageText,
+        timestamp: new Date(),
+      };
 
-**The Story:**
-Dheedo Ranjha, a handsome young man from Takht Hazara, fell in love with Heer Sial, the beautiful daughter of a wealthy landlord. Ranjha became a cowherd just to be near her.
+      setMessages((prev) => [...prev, userMessage]);
+      setInput("");
+      if (textareaRef.current) {
+        textareaRef.current.style.height = "auto";
+      }
+      setIsTyping(true);
 
-Their love was discovered, and Heer was forced to marry another. Years later, Ranjha, now a wandering faqir, found her. They were about to reunite when Heer's uncle poisoned her. Ranjha, heartbroken, died by her side.
+      const botId = (Date.now() + 1).toString();
+      const botMessage: Message = {
+        id: botId,
+        role: "bot",
+        content: "",
+        timestamp: new Date(),
+        isStreaming: true,
+      };
+      setMessages((prev) => [...prev, botMessage]);
 
-*"ہیر تے نیں کہندی رانجھے دی، رانجھا جوگ دا جانے"*
+      try {
+        if (!chatSessionRef.current) {
+          chatSessionRef.current = createStorytellerSession();
+        }
 
-This tale is a symbol of eternal love in Punjabi culture. 💔`;
+        const stream = sendStoryStreaming(chatSessionRef.current, messageText);
+        for await (const chunk of stream) {
+          setMessages((prev) =>
+            prev.map((msg) =>
+              msg.id === botId ? { ...msg, content: msg.content + chunk } : msg
+            )
+          );
+        }
+      } catch (error) {
+        console.error("Storyteller API error:", error);
+        setMessages((prev) =>
+          prev.map((msg) =>
+            msg.id === botId
+              ? {
+                  ...msg,
+                  content:
+                    "I'm sorry, I encountered an error while weaving your tale. Please try again in a moment. 🙏",
+                }
+              : msg
+          )
+        );
+      } finally {
+        setMessages((prev) =>
+          prev.map((msg) =>
+            msg.id === botId ? { ...msg, isStreaming: false } : msg
+          )
+        );
+        setIsTyping(false);
+      }
+    },
+    [input, isTyping]
+  );
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
     }
-
-    if (q.includes("jinnat") || q.includes("jinn") || q.includes("ghost")) {
-      return `👻 **Tales of Jinnat in Pakistani Folklore**
-
-In Pakistani tradition, Jinnat (جنات) are supernatural beings created from smokeless fire. They exist in a parallel world to humans.
-
-**Common Beliefs:**
-- Jinns are believed to live in abandoned places, old trees, and ruins
-- They can be good (Muslim Jinns) or mischievous (Shaitan)
-- Certain prayers and recitations offer protection
-
-**A Village Tale:**
-In many villages, there's always a "haunted" well or old house where Jinns supposedly reside. Elders warn children not to go there after Maghrib prayer.
-
-*"جنات کی دنیا الگ ہے، مگر کبھی کبھار راستے مل جاتے ہیں"*
-
-Would you like to hear more specific Jinn stories from different regions? 🏚️`;
-    }
-
-    if (q.includes("sohni") || q.includes("mahiwal")) {
-      return `💔 **The Tragic Love of Sohni Mahiwal**
-
-Another immortal Punjabi love story, Sohni Mahiwal tells of forbidden love that ends in the Chenab river.
-
-**The Tale:**
-Sohni, a beautiful potter's daughter, fell in love with Izzat Baig (called Mahiwal), a wealthy merchant. They would meet secretly at night.
-
-Sohni would swim across the Chenab river using an earthen pot for flotation. Her jealous sister-in-law replaced the baked pot with an unbaked one. It dissolved in the water, and Sohni drowned. Mahiwal, seeing her drown, jumped in to save her and perished too.
-
-Their tomb stands on the banks of the Chenab to this day.
-
-*"پریت لگی تے لگ گئی، اودھروں تُٹ نہ جاندی"* 🌊`;
-    }
-
-    return `📚 **Pakistani Folklore & Mythology**
-
-I can tell you many fascinating stories! Here are some tales I know:
-
-🌹 **Romantic Epics:**
-- Heer Ranjha - The greatest Punjabi love story
-- Sohni Mahiwal - The tragic tale of the Chenab
-- Sassi Punnu - A story from Balochistan
-
-👻 **Supernatural Tales:**
-- Stories of Jinnat and their world
-- The legends of Churail
-- Tales of Pirs and Faqirs
-
-🏔️ **Regional Legends:**
-- The fairy tales of Swat Valley
-- Legends of the Karakoram mountains
-- Stories from the Thar desert
-
-Just ask me about any of these, or share a myth you've heard! I'm here to narrate and explore our rich cultural heritage. ✨`;
   };
+
+  const showSuggestions = messages.length <= 1;
 
   const handleSubmitStory = () => {
     if (!user) {
@@ -204,14 +219,21 @@ Just ask me about any of these, or share a myth you've heard! I'm here to narrat
               <ArrowLeft className="w-5 h-5 text-muted-foreground" />
             </Link>
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-xl bg-secondary flex items-center justify-center">
-                <Book className="w-6 h-6 text-secondary-foreground" />
+              <div className="relative">
+                <div className="w-12 h-12 rounded-xl bg-secondary ring-2 ring-secondary/30 shadow-lg flex items-center justify-center">
+                  <BookOpen className="w-6 h-6 text-secondary-foreground" />
+                </div>
+                <span className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-secondary border-2 border-background" />
               </div>
               <div>
-                <h1 className="font-display text-xl font-semibold text-foreground">Storytelling Hub</h1>
-                <div className="flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-secondary animate-pulse" />
-                  <span className="text-sm text-muted-foreground">Explore Pakistani Folklore</span>
+                <h1 className="font-display text-xl font-semibold text-foreground">
+                  Storytelling Hub
+                </h1>
+                <div className="flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-secondary animate-pulse" />
+                  <span className="text-xs text-muted-foreground">
+                    Explore Pakistani Folklore
+                  </span>
                 </div>
               </div>
             </div>
@@ -229,6 +251,7 @@ Just ask me about any of these, or share a myth you've heard! I'm here to narrat
             <Button
               variant={activeTab === "chat" ? "default" : "ghost"}
               onClick={() => setActiveTab("chat")}
+              className={activeTab === "chat" ? "bg-secondary text-secondary-foreground hover:bg-secondary/90" : ""}
             >
               <Sparkles className="w-4 h-4 mr-2" />
               AI Storyteller
@@ -245,7 +268,6 @@ Just ask me about any of these, or share a myth you've heard! I'm here to narrat
           {/* Published Stories Tab */}
           {activeTab === "stories" && (
             <div className="space-y-6">
-              {/* Search */}
               <div className="relative max-w-md">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                 <input
@@ -257,11 +279,10 @@ Just ask me about any of these, or share a myth you've heard! I'm here to narrat
                 />
               </div>
 
-              {/* Stories Grid */}
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {filteredStories.map((story) => (
-                  <Link 
-                    key={story.id} 
+                  <Link
+                    key={story.id}
                     to={`/story/${story.id}`}
                     className="bg-card rounded-2xl p-6 shadow-soft hover:shadow-lg transition-shadow group"
                   >
@@ -315,73 +336,155 @@ Just ask me about any of these, or share a myth you've heard! I'm here to narrat
             </div>
           )}
 
-          {/* AI Chat Tab */}
+          {/* AI Storyteller Chat Tab */}
           {activeTab === "chat" && (
             <div className="max-w-4xl mx-auto">
-              <div className="bg-card rounded-2xl shadow-soft flex flex-col overflow-hidden h-[60vh]">
-                {/* Messages */}
-                <div className="flex-1 overflow-y-auto p-4 lg:p-6 space-y-4">
-                  {messages.map((message) => (
-                    <div
-                      key={message.id}
-                      className={`flex gap-3 ${message.role === "user" ? "justify-end" : ""}`}
-                    >
-                      {message.role === "bot" && (
-                        <div className="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center flex-shrink-0">
-                          <Book className="w-4 h-4 text-secondary-foreground" />
-                        </div>
-                      )}
+              <div className="bg-card rounded-2xl shadow-card flex flex-col overflow-hidden relative border border-border/50" style={{ height: "calc(100vh - 220px)" }}>
+                {/* Warm storytelling pattern overlay */}
+                <div
+                  className="absolute inset-0 pointer-events-none opacity-[0.02]"
+                  style={{
+                    backgroundImage: `url("data:image/svg+xml,%3Csvg width='80' height='80' viewBox='0 0 80 80' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23B8860B' fill-opacity='1'%3E%3Cpath d='M40 0c2.2 0 4 1.8 4 4s-1.8 4-4 4-4-1.8-4-4 1.8-4 4-4zm0 72c2.2 0 4 1.8 4 4s-1.8 4-4 4-4-1.8-4-4 1.8-4 4-4zm36-36c2.2 0 4 1.8 4 4s-1.8 4-4 4-4-1.8-4-4 1.8-4 4-4zM4 36c2.2 0 4 1.8 4 4s-1.8 4-4 4-4-1.8-4-4 1.8-4 4-4z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
+                  }}
+                />
+
+                {/* Messages Area */}
+                <ScrollArea ref={scrollAreaRef} className="flex-1">
+                  <div className="p-4 lg:p-6 space-y-4 relative">
+                    {messages.map((message) => (
                       <div
-                        className={`max-w-[80%] px-4 py-3 rounded-2xl ${
-                          message.role === "user"
-                            ? "bg-primary text-primary-foreground rounded-tr-md"
-                            : "bg-muted text-foreground rounded-tl-md"
+                        key={message.id}
+                        className={`flex gap-3 animate-fade-in ${
+                          message.role === "user" ? "justify-end" : ""
                         }`}
                       >
-                        <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                        {message.role === "bot" && (
+                          <div className="w-8 h-8 rounded-lg bg-secondary ring-1 ring-secondary/30 flex items-center justify-center flex-shrink-0 shadow-sm">
+                            <BookOpen className="w-4 h-4 text-secondary-foreground" />
+                          </div>
+                        )}
+
+                        <div
+                          className={`max-w-[85%] lg:max-w-[75%] ${
+                            message.role === "user"
+                              ? "bg-secondary text-secondary-foreground rounded-2xl rounded-tr-sm px-4 py-3 shadow-sm"
+                              : "bg-muted/60 text-foreground rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm border border-border/30"
+                          }`}
+                        >
+                          {message.role === "bot" ? (
+                            <div className="prose prose-sm max-w-none prose-headings:text-foreground prose-p:text-foreground prose-strong:text-foreground prose-li:text-foreground prose-a:text-secondary prose-em:text-muted-foreground">
+                              <ReactMarkdown>{message.content}</ReactMarkdown>
+                              {message.isStreaming && (
+                                <span className="streaming-cursor inline-block w-1.5 h-4 ml-0.5 rounded-sm" />
+                              )}
+                            </div>
+                          ) : (
+                            <p className="text-sm whitespace-pre-wrap leading-relaxed">
+                              {message.content}
+                            </p>
+                          )}
+                          <p
+                            className={`text-[10px] mt-1.5 ${
+                              message.role === "user"
+                                ? "text-secondary-foreground/60"
+                                : "text-muted-foreground/60"
+                            }`}
+                          >
+                            {message.timestamp.toLocaleTimeString([], {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}
+                          </p>
+                        </div>
+
+                        {message.role === "user" && (
+                          <div className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center flex-shrink-0 shadow-sm">
+                            <User className="w-4 h-4 text-muted-foreground" />
+                          </div>
+                        )}
                       </div>
-                      {message.role === "user" && (
-                        <div className="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center flex-shrink-0">
-                          <User className="w-4 h-4 text-secondary-foreground" />
+                    ))}
+
+                    {/* AI Thinking Indicator */}
+                    {isTyping &&
+                      !messages[messages.length - 1]?.isStreaming && (
+                        <div className="flex gap-3 animate-fade-in">
+                          <div className="w-8 h-8 rounded-lg bg-secondary ring-1 ring-secondary/30 flex items-center justify-center flex-shrink-0 shadow-sm">
+                            <BookOpen className="w-4 h-4 text-secondary-foreground" />
+                          </div>
+                          <div className="ai-thinking-container bg-muted/60 px-5 py-3 rounded-2xl rounded-tl-sm border border-border/30" style={{ "--tw-shadow": "0 0 8px hsl(40 70% 50% / 0.3)" } as React.CSSProperties}>
+                            <div className="flex items-center gap-3">
+                              <div className="flex items-center gap-[3px] h-5">
+                                {[0, 1, 2, 3, 4].map((i) => (
+                                  <span
+                                    key={i}
+                                    className="ai-thinking-bar"
+                                    style={{ animationDelay: `${i * 0.15}s`, background: "linear-gradient(180deg, hsl(var(--secondary)) 0%, hsl(var(--accent)) 100%)" }}
+                                  />
+                                ))}
+                              </div>
+                              <span className="ai-thinking-text text-xs font-medium text-muted-foreground tracking-wide">
+                                Weaving your tale...
+                              </span>
+                            </div>
+                          </div>
                         </div>
                       )}
-                    </div>
-                  ))}
 
-                  {isTyping && (
-                    <div className="flex gap-3">
-                      <div className="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center flex-shrink-0">
-                        <Book className="w-4 h-4 text-secondary-foreground" />
-                      </div>
-                      <div className="bg-muted px-4 py-3 rounded-2xl rounded-tl-md">
-                        <div className="flex gap-1">
-                          <span className="w-2 h-2 rounded-full bg-muted-foreground animate-bounce" style={{ animationDelay: "0ms" }} />
-                          <span className="w-2 h-2 rounded-full bg-muted-foreground animate-bounce" style={{ animationDelay: "150ms" }} />
-                          <span className="w-2 h-2 rounded-full bg-muted-foreground animate-bounce" style={{ animationDelay: "300ms" }} />
+                    {/* Suggested Stories */}
+                    {showSuggestions && (
+                      <div className="pt-4 animate-fade-in">
+                        <div className="flex items-center gap-2 mb-3">
+                          <Book className="w-4 h-4 text-secondary" />
+                          <span className="text-sm font-medium text-muted-foreground">
+                            Popular tales to explore
+                          </span>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                          {SUGGESTED_STORIES.map((q) => (
+                            <button
+                              key={q.text}
+                              onClick={() => handleSend(q.text)}
+                              disabled={isTyping}
+                              className="p-3 rounded-xl border border-border bg-background/80 hover:bg-muted hover:border-secondary/30 hover:shadow-sm transition-all duration-200 text-left text-sm group disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              <span className="text-base mr-2">{q.emoji}</span>
+                              <span className="text-foreground/80 group-hover:text-secondary transition-colors">
+                                {q.text}
+                              </span>
+                            </button>
+                          ))}
                         </div>
                       </div>
-                    </div>
-                  )}
-                </div>
+                    )}
+                  </div>
+                </ScrollArea>
 
-                {/* Input */}
-                <div className="p-4 border-t border-border">
-                  <div className="flex gap-3">
-                    <input
-                      type="text"
+                {/* Input Area */}
+                <div className="p-4 border-t border-border/50 bg-card/80 backdrop-blur-sm">
+                  <div className="flex gap-2 items-end">
+                    <textarea
+                      ref={textareaRef}
                       value={input}
-                      onChange={(e) => setInput(e.target.value)}
-                      onKeyDown={(e) => e.key === "Enter" && handleSend()}
+                      onChange={handleTextareaChange}
+                      onKeyDown={handleKeyDown}
                       placeholder="Ask for a story... (e.g., 'Tell me about Heer Ranjha')"
-                      className="flex-1 px-4 py-3 rounded-xl bg-muted border border-border focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none"
+                      rows={1}
+                      disabled={isTyping}
+                      className="flex-1 px-4 py-3 rounded-xl bg-muted/50 border border-border focus:border-secondary focus:ring-2 focus:ring-secondary/20 outline-none resize-none text-sm transition-all duration-200 disabled:opacity-50 min-h-[44px] max-h-[120px]"
                     />
-                    <Button onClick={handleSend} disabled={!input.trim() || isTyping} size="lg">
-                      <Send className="w-5 h-5" />
+                    <Button
+                      onClick={() => handleSend()}
+                      disabled={!input.trim() || isTyping}
+                      size="lg"
+                      className="rounded-xl h-[44px] w-[44px] p-0 shrink-0 shadow-sm bg-secondary hover:bg-secondary/90 text-secondary-foreground"
+                    >
+                      <Send className="w-4 h-4" />
                     </Button>
                   </div>
-                  <p className="text-xs text-muted-foreground mt-2 text-center">
+                  <p className="text-[11px] text-muted-foreground/60 mt-2 text-center">
                     <Sparkles className="w-3 h-3 inline mr-1" />
-                    AI-powered storytelling • Rich cultural narratives
+                    Powered by OpenAI &middot; Rich cultural narratives
                   </p>
                 </div>
               </div>
@@ -452,8 +555,6 @@ Just ask me about any of these, or share a myth you've heard! I'm here to narrat
           )}
         </div>
       </main>
-
-      <Footer />
     </div>
   );
 };
