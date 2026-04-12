@@ -5,17 +5,19 @@ import { TrendingUp, Eye, MessageSquare, Heart, Share2, Clock, CheckCircle, XCir
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { useMyths } from "@/hooks/useMyths";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 const statusConfig = {
-  verified: { icon: CheckCircle, label: "Verified True", color: "text-verified", bg: "bg-verified/10" },
-  debunked: { icon: XCircle, label: "Debunked", color: "text-debunked", bg: "bg-debunked/10" },
-  partial: { icon: AlertTriangle, label: "Partially True", color: "text-partial", bg: "bg-partial/10" },
+  verified: { icon: CheckCircle, label: "verified", color: "text-verified", bg: "bg-verified/10" },
+  debunked: { icon: XCircle, label: "debunked", color: "text-debunked", bg: "bg-debunked/10" },
+  partial: { icon: AlertTriangle, label: "partial", color: "text-partial", bg: "bg-partial/10" },
 };
 
 const TrendingPage = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [selectedStatus, setSelectedStatus] = useState<string>("all");
   const { data: allMyths = [] } = useMyths({ orderBy: 'views' });
+  const { t } = useLanguage();
 
   const categories = ["all", "Health", "Cultural", "Social", "Historical"];
   const statuses = ["all", "verified", "debunked", "partial"];
@@ -46,8 +48,8 @@ const TrendingPage = () => {
                 <TrendingUp className="w-6 h-6 text-primary-foreground" />
               </div>
               <div>
-                <h1 className="font-display text-2xl md:text-3xl font-bold text-foreground">Trending Myths</h1>
-                <p className="text-muted-foreground">Most discussed and viewed myths this week</p>
+                <h1 className="font-display text-2xl md:text-3xl font-bold text-foreground">{t("trending.pageTitle")}</h1>
+                <p className="text-muted-foreground">{t("trending.pageSubtitle")}</p>
               </div>
             </div>
           </div>
@@ -56,11 +58,11 @@ const TrendingPage = () => {
           <div className="flex flex-wrap gap-4 mb-8 p-4 bg-card rounded-2xl shadow-soft">
             <div className="flex items-center gap-2">
               <Filter className="w-4 h-4 text-muted-foreground" />
-              <span className="text-sm font-medium text-foreground">Filters:</span>
+              <span className="text-sm font-medium text-foreground">{t("trending.filters")}</span>
             </div>
-            
+
             <div className="flex flex-wrap gap-2">
-              <span className="text-sm text-muted-foreground">Category:</span>
+              <span className="text-sm text-muted-foreground">{t("trending.category")}</span>
               {categories.map((cat) => (
                 <button
                   key={cat}
@@ -71,13 +73,13 @@ const TrendingPage = () => {
                       : "bg-muted text-muted-foreground hover:bg-muted/80"
                   }`}
                 >
-                  {cat === "all" ? "All" : cat}
+                  {cat === "all" ? t("trending.all") : cat}
                 </button>
               ))}
             </div>
 
             <div className="flex flex-wrap gap-2">
-              <span className="text-sm text-muted-foreground">Status:</span>
+              <span className="text-sm text-muted-foreground">{t("trending.status")}</span>
               {statuses.map((status) => (
                 <button
                   key={status}
@@ -88,7 +90,7 @@ const TrendingPage = () => {
                       : "bg-muted text-muted-foreground hover:bg-muted/80"
                   }`}
                 >
-                  {status === "all" ? "All" : status.charAt(0).toUpperCase() + status.slice(1)}
+                  {status === "all" ? t("trending.all") : t(`status.${status}`)}
                 </button>
               ))}
             </div>
@@ -98,6 +100,7 @@ const TrendingPage = () => {
           <div className="space-y-4">
             {filteredMyths.map((myth, index) => {
               const StatusIcon = statusConfig[myth.status as keyof typeof statusConfig].icon;
+              const statusKey = statusConfig[myth.status as keyof typeof statusConfig].label;
               return (
                 <Link
                   key={myth.id}
@@ -119,7 +122,7 @@ const TrendingPage = () => {
                         <div className={`inline-flex items-center gap-1 px-2 py-1 rounded-full ${statusConfig[myth.status as keyof typeof statusConfig].bg}`}>
                           <StatusIcon className={`w-3 h-3 ${statusConfig[myth.status as keyof typeof statusConfig].color}`} />
                           <span className={`text-xs font-medium ${statusConfig[myth.status as keyof typeof statusConfig].color}`}>
-                            {statusConfig[myth.status as keyof typeof statusConfig].label}
+                            {t(`status.${statusKey}`)}
                           </span>
                         </div>
                         <span className="text-xs text-muted-foreground flex items-center gap-1">
@@ -154,7 +157,7 @@ const TrendingPage = () => {
                     </div>
 
                     {/* Share button */}
-                    <button 
+                    <button
                       onClick={(e) => {
                         e.preventDefault();
                         // Share functionality
@@ -172,16 +175,16 @@ const TrendingPage = () => {
           {filteredMyths.length === 0 && (
             <div className="text-center py-12">
               <TrendingUp className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-              <p className="text-muted-foreground">No myths found matching your filters.</p>
-              <Button 
-                variant="outline" 
+              <p className="text-muted-foreground">{t("trending.noResults")}</p>
+              <Button
+                variant="outline"
                 className="mt-4"
                 onClick={() => {
                   setSelectedCategory("all");
                   setSelectedStatus("all");
                 }}
               >
-                Clear Filters
+                {t("trending.clearFilters")}
               </Button>
             </div>
           )}

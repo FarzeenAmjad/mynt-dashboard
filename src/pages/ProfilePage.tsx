@@ -5,6 +5,7 @@ import { ArrowLeft, Check, Save, Mail, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { useToast } from "@/hooks/use-toast";
 import { updateProfile } from "@/services/profiles";
 import { createAvatar } from "@dicebear/core";
@@ -42,6 +43,7 @@ function generateAvatar(styleName: string, seed: string): string {
 const ProfilePage = () => {
   const { user, profile, refreshProfile } = useAuth();
   const { toast } = useToast();
+  const { t } = useLanguage();
 
   const [name, setName] = useState(profile?.name || "");
   const [selectedAvatar, setSelectedAvatar] = useState(profile?.avatar_url || "adventurer");
@@ -67,9 +69,9 @@ const ProfilePage = () => {
         avatar_url: selectedAvatar,
       });
       await refreshProfile();
-      toast({ title: "Profile updated", description: "Your changes have been saved." });
+      toast({ title: t("profile.updated"), description: t("profile.savedDesc") });
     } catch {
-      toast({ title: "Error", description: "Failed to update profile. Please try again.", variant: "destructive" });
+      toast({ title: t("common.error"), description: t("common.tryAgain"), variant: "destructive" });
     } finally {
       setIsSaving(false);
     }
@@ -89,7 +91,7 @@ const ProfilePage = () => {
             className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-secondary mb-8 transition-colors group"
           >
             <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
-            Back to Home
+            {t("profile.backToHome")}
           </Link>
 
           {/* Profile Card */}
@@ -123,8 +125,8 @@ const ProfilePage = () => {
             <div className="p-6 lg:p-8 space-y-8">
               {/* Avatar Selection */}
               <div>
-                <h2 className="text-sm font-semibold text-foreground mb-1">Choose your avatar</h2>
-                <p className="text-xs text-muted-foreground mb-4">Select a style — your unique avatar is generated from your email.</p>
+                <h2 className="text-sm font-semibold text-foreground mb-1">{t("profile.chooseAvatar")}</h2>
+                <p className="text-xs text-muted-foreground mb-4">{t("profile.avatarDesc")}</p>
                 <div className="grid grid-cols-4 sm:grid-cols-8 gap-3">
                   {avatarPreviews.map((av) => (
                     <button
@@ -160,26 +162,26 @@ const ProfilePage = () => {
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-foreground mb-2">
-                    Display Name
+                    {t("profile.displayName")}
                   </label>
                   <input
                     type="text"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    placeholder="Your display name"
+                    placeholder={t("profile.displayName")}
                     className="w-full px-4 py-3 rounded-xl bg-muted/50 border border-border focus:border-secondary focus:ring-2 focus:ring-secondary/20 outline-none transition-all"
                   />
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-foreground mb-2">
-                    Email Address
+                    {t("profile.emailAddress")}
                   </label>
                   <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-muted/30 border border-border/50">
                     <Mail className="w-4 h-4 text-muted-foreground" />
                     <span className="text-sm text-muted-foreground">{user?.email}</span>
                   </div>
-                  <p className="text-xs text-muted-foreground mt-1">Email cannot be changed.</p>
+                  <p className="text-xs text-muted-foreground mt-1">{t("profile.emailNotChange")}</p>
                 </div>
               </div>
 
@@ -193,12 +195,12 @@ const ProfilePage = () => {
                 {isSaving ? (
                   <span className="flex items-center gap-2">
                     <span className="w-4 h-4 border-2 border-secondary-foreground/30 border-t-secondary-foreground rounded-full animate-spin" />
-                    Saving...
+                    {t("profile.saving")}
                   </span>
                 ) : (
                   <>
                     <Save className="w-4 h-4 mr-2" />
-                    Save Changes
+                    {t("profile.saveChanges")}
                   </>
                 )}
               </Button>

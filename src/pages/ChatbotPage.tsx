@@ -6,6 +6,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Link, useSearchParams } from "react-router-dom";
 import ReactMarkdown from "react-markdown";
 import { createChatSession, sendMessageStreaming } from "@/services/openai";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface Message {
   id: string;
@@ -40,6 +41,7 @@ const ChatbotPage = () => {
   const chatSessionRef = useRef<ReturnType<typeof createChatSession> | null>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const { t } = useLanguage();
 
   // Initialize chat session on mount and handle query param
   useEffect(() => {
@@ -170,12 +172,12 @@ const ChatbotPage = () => {
               </div>
               <div>
                 <h1 className="font-display text-xl font-semibold text-foreground">
-                  Myth Guider AI
+                  {t("chatbot.mythGuiderAI")}
                 </h1>
                 <div className="flex items-center gap-1.5">
                   <span className="w-1.5 h-1.5 rounded-full bg-verified animate-pulse" />
                   <span className="text-xs text-muted-foreground">
-                    Online &middot; Powered by OpenAI
+                    {t("chatbot.online")} &middot; {t("chatbot.poweredBy")}
                   </span>
                 </div>
               </div>
@@ -272,7 +274,7 @@ const ChatbotPage = () => {
                             ))}
                           </div>
                           <span className="ai-thinking-text text-xs font-medium text-muted-foreground tracking-wide">
-                            Analyzing myth...
+                            {t("chatbot.analyzingMyth")}
                           </span>
                         </div>
                       </div>
@@ -285,7 +287,7 @@ const ChatbotPage = () => {
                     <div className="flex items-center gap-2 mb-3">
                       <MessageCircle className="w-4 h-4 text-secondary" />
                       <span className="text-sm font-medium text-muted-foreground">
-                        Popular myths to explore
+                        {t("chatbot.popularMyths")}
                       </span>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
@@ -317,7 +319,7 @@ const ChatbotPage = () => {
                   value={input}
                   onChange={handleTextareaChange}
                   onKeyDown={handleKeyDown}
-                  placeholder="Ask about any Pakistani myth or belief..."
+                  placeholder={t("chatbot.askPlaceholder")}
                   rows={1}
                   disabled={isTyping}
                   className="flex-1 px-4 py-3 rounded-xl bg-muted/50 border border-border focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none resize-none text-sm transition-all duration-200 disabled:opacity-50 min-h-[44px] max-h-[120px]"
@@ -333,7 +335,7 @@ const ChatbotPage = () => {
               </div>
               <p className="text-[11px] text-muted-foreground/60 mt-2 text-center">
                 <Sparkles className="w-3 h-3 inline mr-1" />
-                Powered by OpenAI &middot; Responses may not always be accurate
+                {t("chatbot.poweredFooter")}
               </p>
             </div>
           </div>

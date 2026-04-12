@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { useStory } from "@/hooks/useStories";
 import { useComments, useCreateComment } from "@/hooks/useComments";
 import { useUserStoryVote, useCastStoryVote } from "@/hooks/useVotes";
@@ -53,6 +54,7 @@ const StoryDetail = () => {
   const { id } = useParams();
   const { toast } = useToast();
   const { user, profile } = useAuth();
+  const { t } = useLanguage();
 
   const { data: story, isLoading } = useStory(id!);
   const { data: comments = [] } = useComments({ storyId: id });
@@ -69,7 +71,7 @@ const StoryDetail = () => {
         <main className="pt-20 lg:pt-24 pb-16 flex items-center justify-center min-h-[60vh]">
           <div className="flex flex-col items-center gap-3">
             <div className="w-10 h-10 border-2 border-secondary border-t-transparent rounded-full animate-spin" />
-            <span className="text-sm text-muted-foreground">Loading story...</span>
+            <span className="text-sm text-muted-foreground">{t("storyDetail.loadingStory")}</span>
           </div>
         </main>
         <Footer />
@@ -86,12 +88,12 @@ const StoryDetail = () => {
             <div className="w-20 h-20 rounded-2xl bg-muted flex items-center justify-center mx-auto mb-6">
               <Book className="w-10 h-10 text-muted-foreground" />
             </div>
-            <h1 className="font-display text-2xl font-bold text-foreground mb-2">Story Not Found</h1>
-            <p className="text-muted-foreground mb-6">The story you're looking for doesn't exist or has been removed.</p>
+            <h1 className="font-display text-2xl font-bold text-foreground mb-2">{t("storyDetail.notFound")}</h1>
+            <p className="text-muted-foreground mb-6">{t("storyDetail.notFoundDesc")}</p>
             <Link to="/chatbot/storytelling">
               <Button className="bg-secondary hover:bg-secondary/90 text-secondary-foreground">
                 <ArrowLeft className="w-4 h-4 mr-2" />
-                Back to Stories
+                {t("storyDetail.backToStories")}
               </Button>
             </Link>
           </div>
@@ -103,7 +105,7 @@ const StoryDetail = () => {
 
   const handleLike = () => {
     if (!user) {
-      toast({ title: "Sign in required", description: "Please sign in to like stories.", variant: "destructive" });
+      toast({ title: t("common.signInRequired"), description: t("common.signInToLike"), variant: "destructive" });
       return;
     }
     castVote.mutate({ storyId: id!, userId: user.id });
@@ -112,12 +114,12 @@ const StoryDetail = () => {
   const handleShare = () => {
     const shareUrl = `https://wa.me/?text=${encodeURIComponent(`Read this amazing story: ${story.title} - ${window.location.href}`)}`;
     window.open(shareUrl, "_blank");
-    toast({ title: "Share link opened", description: "WhatsApp sharing window opened." });
+    toast({ title: t("common.shareOpened"), description: t("common.whatsAppOpened") });
   };
 
   const handleAddComment = () => {
     if (!user) {
-      toast({ title: "Sign in required", description: "Please sign in to comment.", variant: "destructive" });
+      toast({ title: t("common.signInRequired"), description: t("common.signInToComment"), variant: "destructive" });
       return;
     }
     if (newComment.trim()) {
@@ -126,10 +128,10 @@ const StoryDetail = () => {
         {
           onSuccess: () => {
             setNewComment("");
-            toast({ title: "Comment added", description: "Your comment has been posted." });
+            toast({ title: t("common.commentAdded"), description: t("common.commentPosted") });
           },
           onError: () => {
-            toast({ title: "Error", description: "Failed to post comment. Please try again.", variant: "destructive" });
+            toast({ title: t("common.error"), description: t("common.commentFailed"), variant: "destructive" });
           },
         }
       );
@@ -150,7 +152,7 @@ const StoryDetail = () => {
             className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-secondary mb-8 transition-colors group"
           >
             <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
-            Back to Stories
+            {t("storyDetail.backToStories")}
           </Link>
 
           <div className="grid lg:grid-cols-3 gap-8">
@@ -169,7 +171,7 @@ const StoryDetail = () => {
                         {story.category}
                       </span>
                       <span className="text-xs text-muted-foreground">
-                        {Math.max(1, Math.ceil(((story.full_content || story.content || "").length) / 1000))} min read
+                        {Math.max(1, Math.ceil(((story.full_content || story.content || "").length) / 1000))} {t("storyDetail.minRead")}
                       </span>
                     </div>
 
@@ -211,7 +213,7 @@ const StoryDetail = () => {
                           className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-muted text-muted-foreground hover:bg-emerald-50 hover:text-emerald-600 transition-all border border-transparent"
                         >
                           <Share2 className="w-3.5 h-3.5" />
-                          Share
+                          {t("storyDetail.share")}
                         </button>
                       </div>
                     </div>
@@ -239,7 +241,7 @@ const StoryDetail = () => {
                 <div className="flex items-center gap-2 mb-6">
                   <MessageCircle className="w-5 h-5 text-secondary" />
                   <h2 className="font-display text-lg font-semibold text-foreground">
-                    Comments
+                    {t("storyDetail.comments")}
                   </h2>
                   {comments.length > 0 && (
                     <span className="px-2 py-0.5 rounded-full bg-secondary/10 text-secondary text-xs font-medium">
@@ -259,7 +261,7 @@ const StoryDetail = () => {
                       value={newComment}
                       onChange={(e) => setNewComment(e.target.value)}
                       onKeyDown={(e) => e.key === "Enter" && handleAddComment()}
-                      placeholder={user ? "Share your thoughts..." : "Sign in to comment..."}
+                      placeholder={user ? t("storyDetail.sharePlaceholder") : t("storyDetail.signInToComment")}
                       disabled={!user}
                       className="flex-1 px-4 py-2.5 rounded-xl bg-muted/50 border border-border focus:border-secondary focus:ring-2 focus:ring-secondary/20 outline-none text-sm transition-all disabled:opacity-50"
                     />
@@ -278,7 +280,7 @@ const StoryDetail = () => {
                 {comments.length === 0 ? (
                   <div className="text-center py-8">
                     <MessageCircle className="w-8 h-8 text-muted-foreground/40 mx-auto mb-2" />
-                    <p className="text-sm text-muted-foreground">No comments yet. Be the first to share your thoughts!</p>
+                    <p className="text-sm text-muted-foreground">{t("storyDetail.noComments")}</p>
                   </div>
                 ) : (
                   <div className="space-y-4">
@@ -315,7 +317,7 @@ const StoryDetail = () => {
                 >
                   <Heart className={`w-6 h-6 transition-transform group-hover:scale-110 ${isLiked ? "text-red-500 fill-red-500" : "text-muted-foreground group-hover:text-red-400"}`} />
                   <span className={`font-semibold ${isLiked ? "text-red-600" : "text-foreground"}`}>
-                    {story.likes} {story.likes === 1 ? "Like" : "Likes"}
+                    {story.likes} {story.likes === 1 ? t("storyDetail.like") : t("storyDetail.likes")}
                   </span>
                 </button>
 
@@ -326,18 +328,18 @@ const StoryDetail = () => {
                   onClick={handleShare}
                 >
                   <Share2 className="w-4 h-4 mr-2" />
-                  Share on WhatsApp
+                  {t("storyDetail.shareWhatsApp")}
                 </Button>
 
                 {/* Story Info */}
                 <div className="space-y-4 pt-4 border-t border-border/60">
-                  <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Story Details</h3>
+                  <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{t("storyDetail.storyDetails")}</h3>
 
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-muted-foreground flex items-center gap-2">
                         <BookOpen className="w-4 h-4" />
-                        Category
+                        {t("story.category")}
                       </span>
                       <span className={`px-2.5 py-1 rounded-full text-xs font-medium border ${categoryColor}`}>
                         {story.category}
@@ -347,7 +349,7 @@ const StoryDetail = () => {
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-muted-foreground flex items-center gap-2">
                         <User className="w-4 h-4" />
-                        Author
+                        {t("storyDetail.author")}
                       </span>
                       <span className="text-sm font-medium text-foreground">{story.author_name}</span>
                     </div>
@@ -355,7 +357,7 @@ const StoryDetail = () => {
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-muted-foreground flex items-center gap-2">
                         <Clock className="w-4 h-4" />
-                        Published
+                        {t("storyDetail.published")}
                       </span>
                       <span className="text-sm font-medium text-foreground">{formatDate(story.published_at)}</span>
                     </div>
@@ -363,7 +365,7 @@ const StoryDetail = () => {
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-muted-foreground flex items-center gap-2">
                         <MessageCircle className="w-4 h-4" />
-                        Comments
+                        {t("storyDetail.comments")}
                       </span>
                       <span className="text-sm font-medium text-foreground">{comments.length}</span>
                     </div>

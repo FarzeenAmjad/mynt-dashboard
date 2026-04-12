@@ -5,17 +5,39 @@ import { useNavigate } from "react-router-dom";
 import heroImage from "@/assets/hero-bg.jpg";
 import { useLanguage } from "@/contexts/LanguageContext";
 
-const PLACEHOLDER_PHRASES = [
+const PLACEHOLDER_PHRASES_EN = [
   "Does eating rice at night cause weight gain?",
   "Do black cats bring bad luck in Pakistan?",
   "Can mixing milk and fish cause skin disease?",
   "Is cracking knuckles harmful for joints?",
-  "کیا نظر لگنا سچ ہے؟",
+  "Is the number 13 really unlucky?",
 ];
+
+const PLACEHOLDER_PHRASES_UR = [
+  "کیا رات کو چاول کھانے سے وزن بڑھتا ہے؟",
+  "کیا کالی بلی منحوس ہوتی ہے؟",
+  "کیا دودھ اور مچھلی ملا کر کھانے سے جلد کی بیماری ہوتی ہے؟",
+  "کیا نظر لگنا سچ ہے؟",
+  "کیا 13 نمبر منحوس ہے؟",
+];
+
+const PLACEHOLDER_PHRASES_PN = [
+  "کی رات نوں چاول کھان نال وزن ودھدا اے؟",
+  "کی کالی بلی منحوس ہوندی اے؟",
+  "کی دودھ تے مچھلی رلا کے کھان نال جلد دی بیماری ہوندی اے؟",
+  "کی نظر لگنا سچ اے؟",
+  "کی 13 نمبر منحوس اے؟",
+];
+
+const PHRASES_MAP: Record<string, string[]> = {
+  en: PLACEHOLDER_PHRASES_EN,
+  ur: PLACEHOLDER_PHRASES_UR,
+  pn: PLACEHOLDER_PHRASES_PN,
+};
 
 export const HeroSection = () => {
   const [searchQuery, setSearchQuery] = useState("");
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const navigate = useNavigate();
 
   // Typewriter state
@@ -25,8 +47,21 @@ export const HeroSection = () => {
   const isDeleting = useRef(false);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  const phrasesRef = useRef(PHRASES_MAP[language] || PLACEHOLDER_PHRASES_EN);
+
+  // Reset typewriter when language changes
+  useEffect(() => {
+    phrasesRef.current = PHRASES_MAP[language] || PLACEHOLDER_PHRASES_EN;
+    phraseIndex.current = 0;
+    charIndex.current = 0;
+    isDeleting.current = false;
+    setDisplayText("");
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    timeoutRef.current = setTimeout(tick, 600);
+  }, [language]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const tick = useCallback(() => {
-    const currentPhrase = PLACEHOLDER_PHRASES[phraseIndex.current];
+    const currentPhrase = phrasesRef.current[phraseIndex.current];
 
     if (!isDeleting.current) {
       // Typing
@@ -51,7 +86,7 @@ export const HeroSection = () => {
         // Finished deleting — move to next phrase
         isDeleting.current = false;
         phraseIndex.current =
-          (phraseIndex.current + 1) % PLACEHOLDER_PHRASES.length;
+          (phraseIndex.current + 1) % phrasesRef.current.length;
         timeoutRef.current = setTimeout(tick, 500);
         return;
       }

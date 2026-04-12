@@ -2,6 +2,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { LogOut, User, Shield, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useRef, useEffect, useMemo } from "react";
 import { createAvatar } from "@dicebear/core";
@@ -19,6 +20,7 @@ const STYLE_MAP: Record<string, any> = {
 
 export const UserMenu = () => {
   const { user, profile, isLoading, signOut, isAdmin } = useAuth();
+  const { t } = useLanguage();
   const { toast } = useToast();
   const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
@@ -49,7 +51,7 @@ export const UserMenu = () => {
     return (
       <Link to="/auth">
         <Button variant="outline" size="sm">
-          Sign In
+          {t("auth.signIn")}
         </Button>
       </Link>
     );
@@ -119,20 +121,20 @@ export const UserMenu = () => {
             className="flex items-center gap-2 px-4 py-2.5 text-sm text-foreground hover:bg-muted transition-colors"
           >
             <User className="w-4 h-4" />
-            Profile
+            {t("common.profile")}
           </Link>
 
           <button
             onClick={async () => {
               setIsOpen(false);
               await signOut();
-              toast({ title: "Signed out", description: "You have been signed out successfully." });
+              toast({ title: t("common.signedOut"), description: t("common.signedOutDesc") });
               navigate("/");
             }}
             className="flex items-center gap-2 px-4 py-2.5 text-sm text-destructive hover:bg-muted transition-colors w-full text-left"
           >
             <LogOut className="w-4 h-4" />
-            Sign Out
+            {t("common.signOut")}
           </button>
         </div>
       )}

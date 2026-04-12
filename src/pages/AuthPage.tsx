@@ -4,6 +4,7 @@ import { Mail, Lock, User, Eye, EyeOff, Loader2, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 
@@ -18,6 +19,7 @@ const AuthPage = () => {
   const location = useLocation();
   const { toast } = useToast();
   const { signIn, signUp } = useAuth();
+  const { t } = useLanguage();
 
   const from = (location.state as { from?: string })?.from || "/";
 
@@ -29,31 +31,31 @@ const AuthPage = () => {
       const { error } = await signIn(email, password);
       if (error) {
         toast({
-          title: "Sign in failed",
+          title: t("auth.signInFailed"),
           description: error.message,
           variant: "destructive",
         });
       } else {
-        toast({ title: "Welcome back!", description: "You have signed in successfully." });
+        toast({ title: t("auth.welcomeBack"), description: "" });
         navigate(from, { replace: true });
       }
     } else {
       if (!name.trim()) {
-        toast({ title: "Name required", description: "Please enter your name.", variant: "destructive" });
+        toast({ title: t("auth.fullName"), description: t("auth.namePlaceholder"), variant: "destructive" });
         setIsLoading(false);
         return;
       }
       const { error } = await signUp(email, password, name);
       if (error) {
         toast({
-          title: "Sign up failed",
+          title: t("auth.signUpFailed"),
           description: error.message,
           variant: "destructive",
         });
       } else {
         toast({
-          title: "Account created!",
-          description: "Please check your email to confirm your account, then sign in.",
+          title: t("auth.checkEmail"),
+          description: t("auth.confirmEmail"),
         });
         setMode("signin");
       }
@@ -72,12 +74,12 @@ const AuthPage = () => {
               <Shield className="w-8 h-8 text-primary" />
             </div>
             <h1 className="font-display text-2xl font-bold text-foreground">
-              {mode === "signin" ? "Welcome Back" : "Create Account"}
+              {mode === "signin" ? t("auth.welcomeBack") : t("auth.createAccount")}
             </h1>
             <p className="text-muted-foreground mt-1">
               {mode === "signin"
-                ? "Sign in to comment, vote, and share stories"
-                : "Join our community of myth busters"}
+                ? t("auth.signInSubtitle")
+                : t("auth.signUpSubtitle")}
             </p>
           </div>
 
@@ -91,7 +93,7 @@ const AuthPage = () => {
                   : "text-muted-foreground hover:text-foreground"
               }`}
             >
-              Sign In
+              {t("auth.signIn")}
             </button>
             <button
               onClick={() => setMode("signup")}
@@ -101,21 +103,21 @@ const AuthPage = () => {
                   : "text-muted-foreground hover:text-foreground"
               }`}
             >
-              Sign Up
+              {t("auth.signUp")}
             </button>
           </div>
 
           <form onSubmit={handleSubmit} className="bg-card rounded-2xl p-6 shadow-soft space-y-4">
             {mode === "signup" && (
               <div>
-                <label className="block text-sm font-medium text-foreground mb-1.5">Full Name</label>
+                <label className="block text-sm font-medium text-foreground mb-1.5">{t("auth.fullName")}</label>
                 <div className="relative">
                   <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                   <input
                     type="text"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    placeholder="Enter your name"
+                    placeholder={t("auth.namePlaceholder")}
                     className="w-full pl-10 pr-4 py-3 bg-muted/50 border border-border rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
                     required
                   />
@@ -124,14 +126,14 @@ const AuthPage = () => {
             )}
 
             <div>
-              <label className="block text-sm font-medium text-foreground mb-1.5">Email Address</label>
+              <label className="block text-sm font-medium text-foreground mb-1.5">{t("auth.email")}</label>
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <input
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="you@example.com"
+                  placeholder={t("auth.emailPlaceholder")}
                   className="w-full pl-10 pr-4 py-3 bg-muted/50 border border-border rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
                   required
                 />
@@ -139,14 +141,14 @@ const AuthPage = () => {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-foreground mb-1.5">Password</label>
+              <label className="block text-sm font-medium text-foreground mb-1.5">{t("auth.password")}</label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <input
                   type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder={mode === "signup" ? "Min 6 characters" : "Enter your password"}
+                  placeholder={mode === "signup" ? t("auth.passwordMin") : t("auth.passwordPlaceholder")}
                   className="w-full pl-10 pr-12 py-3 bg-muted/50 border border-border rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
                   required
                   minLength={6}
@@ -169,23 +171,23 @@ const AuthPage = () => {
               {isLoading ? (
                 <Loader2 className="w-4 h-4 animate-spin mr-2" />
               ) : null}
-              {mode === "signin" ? "Sign In" : "Create Account"}
+              {mode === "signin" ? t("auth.signIn") : t("auth.createAccount")}
             </Button>
           </form>
 
           <p className="text-center text-sm text-muted-foreground mt-4">
             {mode === "signin" ? (
               <>
-                Don&apos;t have an account?{" "}
+                {t("auth.noAccount")}{" "}
                 <button onClick={() => setMode("signup")} className="text-primary hover:underline font-medium">
-                  Sign up
+                  {t("auth.signUp")}
                 </button>
               </>
             ) : (
               <>
-                Already have an account?{" "}
+                {t("auth.haveAccount")}{" "}
                 <button onClick={() => setMode("signin")} className="text-primary hover:underline font-medium">
-                  Sign in
+                  {t("auth.signIn")}
                 </button>
               </>
             )}

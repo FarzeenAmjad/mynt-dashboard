@@ -6,20 +6,22 @@ import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { useMyth, useIncrementViews } from "@/hooks/useMyths";
 import { useComments, useCreateComment } from "@/hooks/useComments";
 import { useUserMythVote, useCastMythVote } from "@/hooks/useVotes";
 
 const statusConfig = {
-  verified: { icon: CheckCircle, label: "Verified True", color: "text-verified", bg: "bg-verified/10", border: "border-verified" },
-  debunked: { icon: XCircle, label: "Debunked", color: "text-debunked", bg: "bg-debunked/10", border: "border-debunked" },
-  partial: { icon: AlertTriangle, label: "Partially True", color: "text-partial", bg: "bg-partial/10", border: "border-partial" },
+  verified: { icon: CheckCircle, label: "verified", color: "text-verified", bg: "bg-verified/10", border: "border-verified" },
+  debunked: { icon: XCircle, label: "debunked", color: "text-debunked", bg: "bg-debunked/10", border: "border-debunked" },
+  partial: { icon: AlertTriangle, label: "partial", color: "text-partial", bg: "bg-partial/10", border: "border-partial" },
 };
 
 const MythDetail = () => {
   const { id } = useParams();
   const { toast } = useToast();
   const { user, profile } = useAuth();
+  const { t } = useLanguage();
   const { data: myth, isLoading } = useMyth(id!);
   const { data: comments = [] } = useComments({ mythId: id });
   const { data: userVote } = useUserMythVote(id!, user?.id);
@@ -34,7 +36,7 @@ const MythDetail = () => {
 
   const handleVote = (type: "like" | "dislike") => {
     if (!user) {
-      toast({ title: "Please sign in to vote", description: "You must be logged in to vote." });
+      toast({ title: t("common.signInRequired"), description: t("common.signInToVote") });
       return;
     }
     castVote.mutate({ mythId: id!, userId: user.id, voteType: type });
@@ -43,12 +45,12 @@ const MythDetail = () => {
   const handleShare = () => {
     const shareUrl = `https://wa.me/?text=${encodeURIComponent(`Check out this myth debunked: ${myth?.title} - ${window.location.href}`)}`;
     window.open(shareUrl, "_blank");
-    toast({ title: "Share link opened", description: "WhatsApp sharing window opened." });
+    toast({ title: t("common.shareOpened"), description: t("common.whatsAppOpened") });
   };
 
   const handleAddComment = () => {
     if (!user) {
-      toast({ title: "Please sign in to comment", description: "You must be logged in to comment." });
+      toast({ title: t("common.signInRequired"), description: t("common.signInToComment") });
       return;
     }
     if (newComment.trim()) {
@@ -57,10 +59,10 @@ const MythDetail = () => {
         {
           onSuccess: () => {
             setNewComment("");
-            toast({ title: "Comment added", description: "Your comment has been posted." });
+            toast({ title: t("common.commentAdded"), description: t("common.commentPosted") });
           },
           onError: () => {
-            toast({ title: "Error", description: "Failed to post comment. Please try again.", variant: "destructive" });
+            toast({ title: t("common.error"), description: t("common.commentFailed"), variant: "destructive" });
           },
         }
       );
@@ -84,8 +86,8 @@ const MythDetail = () => {
       <div className="min-h-screen bg-background">
         <Navbar />
         <div className="min-h-screen flex flex-col items-center justify-center gap-4">
-          <h1 className="text-2xl font-bold text-foreground">Myth not found</h1>
-          <Link to="/" className="text-primary hover:underline">Go back home</Link>
+          <h1 className="text-2xl font-bold text-foreground">{t("myth.notFound")}</h1>
+          <Link to="/" className="text-primary hover:underline">{t("myth.goBack")}</Link>
         </div>
         <Footer />
       </div>
@@ -104,7 +106,7 @@ const MythDetail = () => {
           {/* Back Button */}
           <Link to="/" className="inline-flex items-center gap-2 text-muted-foreground hover:text-primary mb-8 transition-colors">
             <ArrowLeft className="w-4 h-4" />
-            Back to Home
+            {t("myth.backToHome")}
           </Link>
 
           <div className="grid lg:grid-cols-3 gap-8">
@@ -116,7 +118,7 @@ const MythDetail = () => {
                 <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full ${statusConfig[myth.status].bg} mb-6`}>
                   <StatusIcon className={`w-5 h-5 ${statusConfig[myth.status].color}`} />
                   <span className={`font-medium ${statusConfig[myth.status].color}`}>
-                    {statusConfig[myth.status].label}
+                    {t(`status.${statusConfig[myth.status].label}`)}
                   </span>
                 </div>
 
@@ -138,7 +140,7 @@ const MythDetail = () => {
 
               {/* Content */}
               <div className="bg-card rounded-2xl p-6 lg:p-8 shadow-soft">
-                <h2 className="font-display text-xl font-semibold text-foreground mb-6">Detailed Analysis</h2>
+                <h2 className="font-display text-xl font-semibold text-foreground mb-6">{t("myth.detailedAnalysis")}</h2>
                 <div
                   className="prose prose-lg max-w-none text-foreground prose-headings:font-display prose-headings:text-foreground prose-p:text-muted-foreground prose-li:text-muted-foreground prose-strong:text-foreground"
                   dangerouslySetInnerHTML={{ __html: myth.content || "" }}
@@ -147,7 +149,7 @@ const MythDetail = () => {
 
               {/* Sources */}
               <div className="bg-card rounded-2xl p-6 lg:p-8 shadow-soft">
-                <h2 className="font-display text-xl font-semibold text-foreground mb-6">Credible Sources</h2>
+                <h2 className="font-display text-xl font-semibold text-foreground mb-6">{t("myth.credibleSources")}</h2>
                 <div className="space-y-3">
                   {sources.map((source, index) => (
                     <a
@@ -166,7 +168,7 @@ const MythDetail = () => {
               {/* Comments Section */}
               <div className="bg-card rounded-2xl p-6 lg:p-8 shadow-soft">
                 <h2 className="font-display text-xl font-semibold text-foreground mb-6">
-                  Comments ({comments.length})
+                  {t("myth.comments")} ({comments.length})
                 </h2>
 
                 {/* Add Comment */}
@@ -175,11 +177,11 @@ const MythDetail = () => {
                     type="text"
                     value={newComment}
                     onChange={(e) => setNewComment(e.target.value)}
-                    placeholder="Add a comment..."
+                    placeholder={t("myth.addComment")}
                     className="flex-1 px-4 py-3 rounded-xl bg-muted border border-border focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none"
                   />
                   <Button onClick={handleAddComment} disabled={!newComment.trim() || createComment.isPending}>
-                    Post
+                    {t("myth.post")}
                   </Button>
                 </div>
 
@@ -202,7 +204,7 @@ const MythDetail = () => {
             <div className="space-y-6">
               {/* Engagement Card */}
               <div className="bg-card rounded-2xl p-6 shadow-soft sticky top-24">
-                <h3 className="font-display text-lg font-semibold text-foreground mb-6">Engagement</h3>
+                <h3 className="font-display text-lg font-semibold text-foreground mb-6">{t("myth.engagement")}</h3>
 
                 <div className="flex gap-4 mb-6">
                   <button
@@ -213,7 +215,7 @@ const MythDetail = () => {
                   >
                     <ThumbsUp className={`w-6 h-6 ${userVote === "like" ? "text-verified" : "text-muted-foreground"}`} />
                     <span className={`font-semibold ${userVote === "like" ? "text-verified" : "text-foreground"}`}>{myth.likes}</span>
-                    <span className="text-xs text-muted-foreground">Helpful</span>
+                    <span className="text-xs text-muted-foreground">{t("myth.helpful")}</span>
                   </button>
 
                   <button
@@ -224,7 +226,7 @@ const MythDetail = () => {
                   >
                     <ThumbsDown className={`w-6 h-6 ${userVote === "dislike" ? "text-destructive" : "text-muted-foreground"}`} />
                     <span className={`font-semibold ${userVote === "dislike" ? "text-destructive" : "text-foreground"}`}>{myth.dislikes}</span>
-                    <span className="text-xs text-muted-foreground">Not Helpful</span>
+                    <span className="text-xs text-muted-foreground">{t("myth.notHelpful")}</span>
                   </button>
                 </div>
 
@@ -232,7 +234,7 @@ const MythDetail = () => {
                 <div className="space-y-3">
                   <Button variant="gold" className="w-full" onClick={handleShare}>
                     <Share2 className="w-4 h-4 mr-2" />
-                    Share on WhatsApp
+                    {t("myth.shareWhatsApp")}
                   </Button>
 
                   <Button variant="outline" className="w-full">
@@ -244,11 +246,11 @@ const MythDetail = () => {
                 {/* Stats */}
                 <div className="mt-6 pt-6 border-t border-border">
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">Total views</span>
+                    <span className="text-muted-foreground">{t("myth.totalViews")}</span>
                     <span className="font-medium text-foreground">{myth.views?.toLocaleString() ?? 0}</span>
                   </div>
                   <div className="flex items-center justify-between text-sm mt-2">
-                    <span className="text-muted-foreground">Comments</span>
+                    <span className="text-muted-foreground">{t("myth.comments")}</span>
                     <span className="font-medium text-foreground">{comments.length}</span>
                   </div>
                 </div>
