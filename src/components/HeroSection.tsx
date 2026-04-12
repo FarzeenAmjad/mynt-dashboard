@@ -1,16 +1,18 @@
 import { Search, Mic } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import heroImage from "@/assets/hero-bg.jpg";
 import { useLanguage } from "@/contexts/LanguageContext";
 
 export const HeroSection = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const { t } = useLanguage();
+  const navigate = useNavigate();
 
   const handleSearch = () => {
     if (searchQuery.trim()) {
-      console.log("Searching for:", searchQuery);
+      navigate(`/chatbot?q=${encodeURIComponent(searchQuery.trim())}`);
     }
   };
 

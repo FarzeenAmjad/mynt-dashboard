@@ -1,10 +1,9 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Navbar } from "@/components/Navbar";
-import { Footer } from "@/components/Footer";
 import { Bot, Send, User, Sparkles, ArrowLeft, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import ReactMarkdown from "react-markdown";
 import { createChatSession, sendMessageStreaming } from "@/services/openai";
 
@@ -37,18 +36,29 @@ const ChatbotPage = () => {
   const [messages, setMessages] = useState<Message[]>([INITIAL_MESSAGE]);
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
+  const [searchParams] = useSearchParams();
   const chatSessionRef = useRef<ReturnType<typeof createChatSession> | null>(null);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // Initialize chat session on mount
+  // Initialize chat session on mount and handle query param
   useEffect(() => {
     chatSessionRef.current = createChatSession();
-  }, []);
+    const query = searchParams.get("q");
+    if (query) {
+      // Small delay to ensure chat session is ready
+      setTimeout(() => handleSend(query), 100);
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Auto-scroll to bottom on new messages
+  // Auto-scroll chat area only (not the page) on new messages
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    const viewport = scrollAreaRef.current?.querySelector(
+      "[data-radix-scroll-area-viewport]"
+    );
+    if (viewport) {
+      viewport.scrollTop = viewport.scrollHeight;
+    }
   }, [messages, isTyping]);
 
   // Auto-resize textarea
@@ -138,11 +148,11 @@ const ChatbotPage = () => {
   const showSuggestions = messages.length <= 1;
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="h-screen bg-background flex flex-col overflow-hidden">
       <Navbar />
 
-      <main className="flex-1 pt-20 lg:pt-24 pb-4 flex flex-col">
-        <div className="container mx-auto px-4 flex-1 flex flex-col max-w-4xl">
+      <main className="flex-1 pt-20 lg:pt-24 pb-4 flex flex-col min-h-0">
+        <div className="container mx-auto px-4 flex-1 flex flex-col max-w-4xl min-h-0">
           {/* Header */}
           <div className="flex items-center gap-4 mb-4 animate-fade-in">
             <Link
@@ -173,7 +183,7 @@ const ChatbotPage = () => {
           </div>
 
           {/* Chat Container */}
-          <div className="flex-1 bg-card rounded-2xl shadow-card flex flex-col overflow-hidden relative border border-border/50">
+          <div className="flex-1 min-h-0 bg-card rounded-2xl shadow-card flex flex-col overflow-hidden relative border border-border/50">
             {/* Subtle Islamic geometric pattern overlay */}
             <div
               className="absolute inset-0 pointer-events-none opacity-[0.025]"
@@ -183,7 +193,7 @@ const ChatbotPage = () => {
             />
 
             {/* Messages Area */}
-            <ScrollArea className="flex-1">
+            <ScrollArea ref={scrollAreaRef} className="flex-1">
               <div className="p-4 lg:p-6 space-y-4 relative">
                 {/* Messages */}
                 {messages.map((message) => (
@@ -212,7 +222,7 @@ const ChatbotPage = () => {
                         <div className="prose prose-sm max-w-none prose-headings:text-foreground prose-p:text-foreground prose-strong:text-foreground prose-li:text-foreground prose-a:text-primary">
                           <ReactMarkdown>{message.content}</ReactMarkdown>
                           {message.isStreaming && (
-                            <span className="inline-block w-1.5 h-4 bg-primary ml-0.5 animate-pulse rounded-sm" />
+                            <span className="streaming-cursor inline-block w-1.5 h-4 ml-0.5 rounded-sm" />
                           )}
                         </div>
                       ) : (
@@ -243,27 +253,27 @@ const ChatbotPage = () => {
                   </div>
                 ))}
 
-                {/* Typing indicator */}
+                {/* AI Thinking Indicator */}
                 {isTyping &&
                   !messages[messages.length - 1]?.isStreaming && (
                     <div className="flex gap-3 animate-fade-in">
                       <div className="w-8 h-8 rounded-lg bg-primary ring-1 ring-secondary/50 flex items-center justify-center flex-shrink-0 shadow-sm">
                         <Bot className="w-4 h-4 text-primary-foreground" />
                       </div>
-                      <div className="bg-muted/60 px-4 py-3 rounded-2xl rounded-tl-sm border border-border/30">
-                        <div className="flex gap-1.5 items-center h-5">
-                          <span
-                            className="w-2 h-2 rounded-full bg-primary animate-bounce"
-                            style={{ animationDelay: "0ms" }}
-                          />
-                          <span
-                            className="w-2 h-2 rounded-full bg-primary animate-bounce"
-                            style={{ animationDelay: "150ms" }}
-                          />
-                          <span
-                            className="w-2 h-2 rounded-full bg-primary animate-bounce"
-                            style={{ animationDelay: "300ms" }}
-                          />
+                      <div className="ai-thinking-container bg-muted/60 px-5 py-3 rounded-2xl rounded-tl-sm border border-border/30">
+                        <div className="flex items-center gap-3">
+                          <div className="flex items-center gap-[3px] h-5">
+                            {[0, 1, 2, 3, 4].map((i) => (
+                              <span
+                                key={i}
+                                className="ai-thinking-bar"
+                                style={{ animationDelay: `${i * 0.15}s` }}
+                              />
+                            ))}
+                          </div>
+                          <span className="ai-thinking-text text-xs font-medium text-muted-foreground tracking-wide">
+                            Analyzing myth...
+                          </span>
                         </div>
                       </div>
                     </div>
@@ -296,7 +306,6 @@ const ChatbotPage = () => {
                   </div>
                 )}
 
-                <div ref={messagesEndRef} />
               </div>
             </ScrollArea>
 
@@ -330,8 +339,6 @@ const ChatbotPage = () => {
           </div>
         </div>
       </main>
-
-      <Footer />
     </div>
   );
 };
