@@ -1,14 +1,70 @@
 import { Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useState } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import heroImage from "@/assets/hero-bg.jpg";
 import { useLanguage } from "@/contexts/LanguageContext";
+
+const PLACEHOLDER_PHRASES = [
+  "Does eating rice at night cause weight gain?",
+  "Do black cats bring bad luck in Pakistan?",
+  "Can mixing milk and fish cause skin disease?",
+  "Is cracking knuckles harmful for joints?",
+  "کیا نظر لگنا سچ ہے؟",
+];
 
 export const HeroSection = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const { t } = useLanguage();
   const navigate = useNavigate();
+
+  // Typewriter state
+  const [displayText, setDisplayText] = useState("");
+  const phraseIndex = useRef(0);
+  const charIndex = useRef(0);
+  const isDeleting = useRef(false);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const tick = useCallback(() => {
+    const currentPhrase = PLACEHOLDER_PHRASES[phraseIndex.current];
+
+    if (!isDeleting.current) {
+      // Typing
+      charIndex.current++;
+      setDisplayText(currentPhrase.slice(0, charIndex.current));
+
+      if (charIndex.current === currentPhrase.length) {
+        // Finished typing — pause then start deleting
+        timeoutRef.current = setTimeout(() => {
+          isDeleting.current = true;
+          tick();
+        }, 2000);
+        return;
+      }
+      timeoutRef.current = setTimeout(tick, 50);
+    } else {
+      // Deleting
+      charIndex.current--;
+      setDisplayText(currentPhrase.slice(0, charIndex.current));
+
+      if (charIndex.current === 0) {
+        // Finished deleting — move to next phrase
+        isDeleting.current = false;
+        phraseIndex.current =
+          (phraseIndex.current + 1) % PLACEHOLDER_PHRASES.length;
+        timeoutRef.current = setTimeout(tick, 500);
+        return;
+      }
+      timeoutRef.current = setTimeout(tick, 30);
+    }
+  }, []);
+
+  useEffect(() => {
+    timeoutRef.current = setTimeout(tick, 600);
+    return () => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    };
+  }, [tick]);
 
   const handleSearch = () => {
     if (searchQuery.trim()) {
@@ -36,7 +92,7 @@ export const HeroSection = () => {
       <div className="relative z-10 container mx-auto px-4 py-20 text-center">
         <div className="max-w-4xl mx-auto stagger-children">
           {/* Badge */}
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary-foreground/10 backdrop-blur-sm border border-primary-foreground/20 mb-8">
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary-foreground/10 backdrop-blur-sm border border-primary-foreground/20 mb-8 mt-8">
             <span className="w-2 h-2 rounded-full bg-verified animate-pulse" />
             <span className="text-sm text-primary-foreground/90">{t("hero.badge")}</span>
           </div>
@@ -55,16 +111,23 @@ export const HeroSection = () => {
           {/* Search Bar */}
           <div className="max-w-2xl mx-auto mb-8">
             <div className="relative flex items-center bg-background rounded-2xl shadow-2xl p-2 group">
-              <div className="flex-1 flex items-center">
-                <Search className="w-5 h-5 text-muted-foreground ml-4" />
-                <input
-                  type="text"
-                  placeholder={t("hero.searchPlaceholder")}
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-                  className="flex-1 px-4 py-3 bg-transparent text-foreground placeholder:text-muted-foreground focus:outline-none"
-                />
+              <div className="flex-1 flex items-center relative">
+                <Search className="w-5 h-5 text-muted-foreground ml-4 flex-shrink-0" />
+                <div className="relative flex-1">
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+                    className="w-full px-4 py-3 bg-transparent text-foreground focus:outline-none relative z-10"
+                  />
+                  {!searchQuery && (
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none whitespace-nowrap">
+                      {displayText}
+                      <span className="inline-block w-[2px] h-[1.1em] bg-muted-foreground/60 ml-[1px] align-middle animate-pulse" />
+                    </span>
+                  )}
+                </div>
               </div>
               <Button variant="hero" size="lg" onClick={handleSearch}>
                 {t("hero.verifyNow")}
