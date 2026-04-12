@@ -1,4 +1,4 @@
-import { Search, Mic } from "lucide-react";
+import { Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -65,9 +65,6 @@ export const HeroSection = () => {
                   onKeyDown={(e) => e.key === "Enter" && handleSearch()}
                   className="flex-1 px-4 py-3 bg-transparent text-foreground placeholder:text-muted-foreground focus:outline-none"
                 />
-                <button className="p-2 hover:bg-muted rounded-lg transition-colors mr-2">
-                  <Mic className="w-5 h-5 text-muted-foreground hover:text-primary" />
-                </button>
               </div>
               <Button variant="hero" size="lg" onClick={handleSearch}>
                 {t("hero.verifyNow")}
