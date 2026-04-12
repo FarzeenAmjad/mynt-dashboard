@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Link } from "react-router-dom";
 import ReactMarkdown from "react-markdown";
-import { createChatSession, sendMessageStreaming } from "@/services/gemini";
+import { createChatSession, sendMessageStreaming } from "@/services/openai";
 
 interface Message {
   id: string;
@@ -104,7 +104,7 @@ const ChatbotPage = () => {
           );
         }
       } catch (error) {
-        console.error("Gemini API error:", error);
+        console.error("OpenAI API error:", error);
         setMessages((prev) =>
           prev.map((msg) =>
             msg.id === botId
@@ -165,7 +165,7 @@ const ChatbotPage = () => {
                 <div className="flex items-center gap-1.5">
                   <span className="w-1.5 h-1.5 rounded-full bg-verified animate-pulse" />
                   <span className="text-xs text-muted-foreground">
-                    Online &middot; Powered by Gemini
+                    Online &middot; Powered by OpenAI
                   </span>
                 </div>
               </div>
@@ -324,7 +324,7 @@ const ChatbotPage = () => {
               </div>
               <p className="text-[11px] text-muted-foreground/60 mt-2 text-center">
                 <Sparkles className="w-3 h-3 inline mr-1" />
-                Powered by Gemini AI &middot; Responses may not always be accurate
+                Powered by OpenAI &middot; Responses may not always be accurate
               </p>
             </div>
           </div>
