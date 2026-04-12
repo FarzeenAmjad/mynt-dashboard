@@ -19,8 +19,21 @@ const TrendingPage = () => {
   const { data: allMyths = [] } = useMyths({ orderBy: 'views' });
   const { t } = useLanguage();
 
-  const categories = ["all", "Health", "Cultural", "Social", "Historical"];
+  const categories = [
+    { value: "all", labelKey: "trending.all" },
+    { value: "Health", labelKey: "categories.health.title" },
+    { value: "Cultural", labelKey: "categories.cultural.title" },
+    { value: "Social", labelKey: "categories.social.title" },
+    { value: "Historical", labelKey: "categories.historical.title" },
+  ];
   const statuses = ["all", "verified", "debunked", "partial"];
+
+  const formatDate = (dateStr: string | null) => {
+    if (!dateStr) return "";
+    try {
+      return new Date(dateStr).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+    } catch { return dateStr; }
+  };
 
   const filteredMyths = allMyths.filter((myth) => {
     const categoryMatch = selectedCategory === "all" || myth.category === selectedCategory;
@@ -65,15 +78,15 @@ const TrendingPage = () => {
               <span className="text-sm text-muted-foreground">{t("trending.category")}</span>
               {categories.map((cat) => (
                 <button
-                  key={cat}
-                  onClick={() => setSelectedCategory(cat)}
+                  key={cat.value}
+                  onClick={() => setSelectedCategory(cat.value)}
                   className={`px-3 py-1 text-xs rounded-full transition-colors ${
-                    selectedCategory === cat
+                    selectedCategory === cat.value
                       ? "bg-primary text-primary-foreground"
                       : "bg-muted text-muted-foreground hover:bg-muted/80"
                   }`}
                 >
-                  {cat === "all" ? t("trending.all") : cat}
+                  {t(cat.labelKey)}
                 </button>
               ))}
             </div>
@@ -127,7 +140,7 @@ const TrendingPage = () => {
                         </div>
                         <span className="text-xs text-muted-foreground flex items-center gap-1">
                           <Clock className="w-3 h-3" />
-                          {myth.published_at}
+                          {formatDate(myth.published_at)}
                         </span>
                       </div>
 
