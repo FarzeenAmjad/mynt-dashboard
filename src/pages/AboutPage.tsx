@@ -6,13 +6,6 @@ import { useLanguage } from "@/contexts/LanguageContext";
 const AboutPage = () => {
   const { t } = useLanguage();
 
-  const teamMembers = [
-    { name: "Dr. Amna Hussain", role: "Founder & Lead Researcher", expertise: "Cultural Anthropology" },
-    { name: "Hassan Ali Khan", role: "AI & Technology Lead", expertise: "Machine Learning" },
-    { name: "Fatima Zahra", role: "Content Director", expertise: "Folklore Studies" },
-    { name: "Usman Malik", role: "Community Manager", expertise: "Digital Communication" },
-  ];
-
   const values = [
     { icon: Target, titleKey: "about.accuracy", descKey: "about.accuracyDesc" },
     { icon: Shield, titleKey: "about.integrity", descKey: "about.integrityDesc" },
@@ -113,34 +106,6 @@ const AboutPage = () => {
           </div>
         </section>
 
-        {/* Team Section */}
-        <section className="py-16 lg:py-20">
-          <div className="container mx-auto px-4">
-            <div className="text-center mb-12">
-              <h2 className="font-display text-3xl md:text-4xl font-bold text-foreground mb-4">
-                {t("about.teamTitle")}
-              </h2>
-              <p className="text-muted-foreground max-w-2xl mx-auto">
-                {t("about.teamSubtitle")}
-              </p>
-            </div>
-            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              {teamMembers.map((member) => (
-                <div key={member.name} className="bg-card rounded-2xl p-6 shadow-soft text-center">
-                  <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
-                    <span className="text-2xl font-display font-bold text-primary">
-                      {member.name.split(" ").map(n => n[0]).join("")}
-                    </span>
-                  </div>
-                  <h3 className="font-display text-lg font-semibold text-foreground mb-1">{member.name}</h3>
-                  <p className="text-sm text-primary font-medium mb-1">{member.role}</p>
-                  <p className="text-xs text-muted-foreground">{member.expertise}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
         {/* Contact Section */}
         <section className="py-16 lg:py-20 bg-primary text-primary-foreground">
           <div className="container mx-auto px-4 text-center">
@@ -152,7 +117,7 @@ const AboutPage = () => {
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <a
-                href="mailto:info@mythguider.pk"
+                href="mailto:farzeenamjad456@gmail.com"
                 className="px-6 py-3 bg-primary-foreground text-primary rounded-xl font-medium hover:opacity-90 transition-opacity"
               >
                 {t("about.emailUs")}
