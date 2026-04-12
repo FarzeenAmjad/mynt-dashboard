@@ -53,11 +53,14 @@ const MythDetail = () => {
     }
     if (newComment.trim()) {
       createComment.mutate(
-        { content: newComment, myth_id: id, user_name: profile?.name || "Anonymous", user_id: user?.id },
+        { content: newComment, myth_id: id, user_name: profile?.name || "Anonymous", user_id: user?.id, status: "approved" },
         {
           onSuccess: () => {
             setNewComment("");
             toast({ title: "Comment added", description: "Your comment has been posted." });
+          },
+          onError: () => {
+            toast({ title: "Error", description: "Failed to post comment. Please try again.", variant: "destructive" });
           },
         }
       );
