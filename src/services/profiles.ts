@@ -19,6 +19,17 @@ export async function fetchProfileById(id: string) {
   return data;
 }
 
+export async function updateProfile(id: string, updates: { name?: string; avatar_url?: string | null }) {
+  const { data, error } = await supabase
+    .from('profiles')
+    .update({ ...updates, updated_at: new Date().toISOString() })
+    .eq('id', id)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
 export async function updateProfileRole(id: string, role: 'user' | 'moderator' | 'admin') {
   const { data, error } = await supabase
     .from('profiles')

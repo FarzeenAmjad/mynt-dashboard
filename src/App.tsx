@@ -18,6 +18,7 @@ import CategoriesPage from "./pages/CategoriesPage";
 import TrendingPage from "./pages/TrendingPage";
 import AboutPage from "./pages/AboutPage";
 import SubmitMythPage from "./pages/SubmitMythPage";
+import ProfilePage from "./pages/ProfilePage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -52,6 +53,7 @@ const App = () => (
               <Route path="/trending" element={<TrendingPage />} />
               <Route path="/about" element={<AboutPage />} />
               <Route path="/submit" element={<SubmitMythPage />} />
+              <Route path="/profile" element={<RequireAuth><ProfilePage /></RequireAuth>} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
