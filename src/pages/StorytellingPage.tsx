@@ -10,6 +10,28 @@ import { useStories, useCreateStory } from "@/hooks/useStories";
 import { useAuth } from "@/contexts/AuthContext";
 import { createStorytellerSession, sendStoryStreaming } from "@/services/storyteller";
 
+function formatDate(dateStr: string | null): string {
+  if (!dateStr) return "";
+  try {
+    const date = new Date(dateStr);
+    return date.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
+  } catch {
+    return dateStr;
+  }
+}
+
+const CATEGORY_COLORS: Record<string, string> = {
+  Folklore: "bg-emerald-100 text-emerald-700 border-emerald-200",
+  Supernatural: "bg-purple-100 text-purple-700 border-purple-200",
+  "Urban Legends": "bg-amber-100 text-amber-700 border-amber-200",
+  Historical: "bg-blue-100 text-blue-700 border-blue-200",
+  Regional: "bg-rose-100 text-rose-700 border-rose-200",
+};
+
 interface Message {
   id: string;
   role: "user" | "bot";
@@ -267,59 +289,67 @@ const StorytellingPage = () => {
 
           {/* Published Stories Tab */}
           {activeTab === "stories" && (
-            <div className="space-y-6">
-              <div className="relative max-w-md">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                <input
-                  type="text"
-                  placeholder="Search stories..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-11 pr-4 py-3 rounded-xl bg-card border border-border focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none"
-                />
+            <div className="space-y-6 animate-fade-in">
+              {/* Search + Count */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="relative max-w-md flex-1">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                  <input
+                    type="text"
+                    placeholder="Search stories by title or content..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full pl-11 pr-4 py-3 rounded-xl bg-card border border-border focus:border-secondary focus:ring-2 focus:ring-secondary/20 outline-none transition-all"
+                  />
+                </div>
+                <span className="text-sm text-muted-foreground">
+                  {filteredStories.length} {filteredStories.length === 1 ? "story" : "stories"} found
+                </span>
               </div>
 
+              {/* Stories Grid */}
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filteredStories.map((story) => (
+                {filteredStories.map((story, index) => (
                   <Link
                     key={story.id}
                     to={`/story/${story.id}`}
-                    className="bg-card rounded-2xl p-6 shadow-soft hover:shadow-lg transition-shadow group"
+                    className="bg-card rounded-2xl p-6 shadow-soft hover:shadow-card hover:-translate-y-1 transition-all duration-300 group border border-transparent hover:border-secondary/20 animate-fade-in"
+                    style={{ animationDelay: `${index * 0.05}s`, animationFillMode: "both" }}
                   >
-                    <div className="flex items-center gap-2 mb-3">
-                      <span className="px-2 py-1 rounded-full bg-secondary/10 text-secondary text-xs font-medium">
+                    {/* Category + Date */}
+                    <div className="flex items-center gap-2 mb-4">
+                      <span className={`px-2.5 py-1 rounded-full text-xs font-medium border ${CATEGORY_COLORS[story.category] || "bg-muted text-muted-foreground border-border"}`}>
                         {story.category}
                       </span>
-                      <span className="text-xs text-muted-foreground flex items-center gap-1">
+                      <span className="text-xs text-muted-foreground flex items-center gap-1 ml-auto">
                         <Clock className="w-3 h-3" />
-                        {story.published_at}
+                        {formatDate(story.published_at)}
                       </span>
                     </div>
 
-                    <h3 className="font-display text-lg font-semibold text-foreground mb-2 group-hover:text-primary transition-colors">
+                    {/* Title */}
+                    <h3 className="font-display text-lg font-semibold text-foreground mb-2 group-hover:text-secondary transition-colors leading-snug">
                       {story.title}
                     </h3>
 
-                    <p className="text-sm text-muted-foreground mb-4 line-clamp-3">
+                    {/* Preview */}
+                    <p className="text-sm text-muted-foreground mb-5 line-clamp-3 leading-relaxed">
                       {story.content}
                     </p>
 
-                    <div className="flex items-center justify-between pt-4 border-t border-border">
+                    {/* Footer */}
+                    <div className="flex items-center justify-between pt-4 border-t border-border/60">
                       <div className="flex items-center gap-2">
-                        <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center">
-                          <User className="w-3 h-3 text-primary" />
+                        <div className="w-7 h-7 rounded-full bg-gradient-to-br from-secondary/20 to-primary/10 flex items-center justify-center">
+                          <User className="w-3.5 h-3.5 text-secondary" />
                         </div>
-                        <span className="text-sm text-foreground">{story.author_name}</span>
+                        <span className="text-sm font-medium text-foreground">{story.author_name}</span>
                       </div>
 
                       <div className="flex items-center gap-3">
-                        <span className="flex items-center gap-1 text-muted-foreground">
+                        <span className="flex items-center gap-1 text-muted-foreground hover:text-red-400 transition-colors">
                           <Heart className="w-4 h-4" />
-                          <span className="text-xs">{story.likes}</span>
-                        </span>
-                        <span className="flex items-center gap-1 text-muted-foreground">
-                          <MessageCircle className="w-4 h-4" />
-                          <span className="text-xs">3</span>
+                          <span className="text-xs font-medium">{story.likes}</span>
                         </span>
                       </div>
                     </div>
@@ -328,9 +358,12 @@ const StorytellingPage = () => {
               </div>
 
               {filteredStories.length === 0 && (
-                <div className="text-center py-12">
-                  <Book className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                  <p className="text-muted-foreground">No stories found matching your search.</p>
+                <div className="text-center py-16 animate-fade-in">
+                  <div className="w-16 h-16 rounded-2xl bg-muted flex items-center justify-center mx-auto mb-4">
+                    <Book className="w-8 h-8 text-muted-foreground" />
+                  </div>
+                  <p className="text-lg font-display font-medium text-foreground mb-1">No stories found</p>
+                  <p className="text-sm text-muted-foreground">Try a different search term or browse all stories.</p>
                 </div>
               )}
             </div>
@@ -493,61 +526,99 @@ const StorytellingPage = () => {
 
           {/* Submit Story Tab */}
           {activeTab === "submit" && (
-            <div className="max-w-2xl mx-auto">
-              <div className="bg-card rounded-2xl p-6 lg:p-8 shadow-soft">
-                <div className="text-center mb-6">
-                  <PenLine className="w-12 h-12 text-primary mx-auto mb-3" />
+            <div className="max-w-2xl mx-auto animate-fade-in">
+              <div className="bg-card rounded-2xl p-6 lg:p-8 shadow-card border border-border/50 relative overflow-hidden">
+                {/* Decorative accent */}
+                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-secondary via-primary to-secondary" />
+
+                <div className="text-center mb-8">
+                  <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-secondary/20 to-primary/10 flex items-center justify-center mx-auto mb-4">
+                    <PenLine className="w-8 h-8 text-secondary" />
+                  </div>
                   <h2 className="font-display text-2xl font-bold text-foreground">Share Your Story</h2>
-                  <p className="text-muted-foreground mt-2">
-                    Submit a myth, legend, or folklore story from your region. Our team will review and publish it.
+                  <p className="text-muted-foreground mt-2 max-w-md mx-auto leading-relaxed">
+                    Submit a myth, legend, or folklore story from your region. Our team will review and publish it for the community.
                   </p>
                 </div>
 
-                <div className="space-y-4">
+                {!user && (
+                  <div className="mb-6 p-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-sm flex items-center gap-3">
+                    <BookOpen className="w-5 h-5 flex-shrink-0" />
+                    <span>
+                      You need to <Link to="/auth" className="font-semibold underline underline-offset-2 hover:text-amber-900">sign in</Link> to submit a story.
+                    </span>
+                  </div>
+                )}
+
+                <div className="space-y-5">
                   <div>
-                    <label className="block text-sm font-medium text-foreground mb-2">Story Title</label>
+                    <label className="block text-sm font-medium text-foreground mb-2">
+                      Story Title <span className="text-destructive">*</span>
+                    </label>
                     <input
                       type="text"
                       value={newStory.title}
                       onChange={(e) => setNewStory({ ...newStory, title: e.target.value })}
                       placeholder="Enter a captivating title..."
-                      className="w-full px-4 py-3 rounded-xl bg-muted border border-border focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none"
+                      className="w-full px-4 py-3 rounded-xl bg-muted/50 border border-border focus:border-secondary focus:ring-2 focus:ring-secondary/20 outline-none transition-all"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-foreground mb-2">Category</label>
+                    <label className="block text-sm font-medium text-foreground mb-2">
+                      Category <span className="text-destructive">*</span>
+                    </label>
                     <select
                       value={newStory.category}
                       onChange={(e) => setNewStory({ ...newStory, category: e.target.value })}
-                      className="w-full px-4 py-3 rounded-xl bg-muted border border-border focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none"
+                      className="w-full px-4 py-3 rounded-xl bg-muted/50 border border-border focus:border-secondary focus:ring-2 focus:ring-secondary/20 outline-none transition-all appearance-none cursor-pointer"
                     >
-                      <option value="Folklore">Folklore</option>
-                      <option value="Supernatural">Supernatural</option>
-                      <option value="Urban Legends">Urban Legends</option>
-                      <option value="Historical">Historical</option>
-                      <option value="Regional">Regional Tales</option>
+                      <option value="Folklore">📖 Folklore</option>
+                      <option value="Supernatural">👻 Supernatural</option>
+                      <option value="Urban Legends">🏙️ Urban Legends</option>
+                      <option value="Historical">🏛️ Historical</option>
+                      <option value="Regional">🏔️ Regional Tales</option>
                     </select>
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-foreground mb-2">Your Story</label>
+                    <label className="block text-sm font-medium text-foreground mb-2">
+                      Your Story <span className="text-destructive">*</span>
+                    </label>
                     <textarea
                       value={newStory.content}
                       onChange={(e) => setNewStory({ ...newStory, content: e.target.value })}
-                      placeholder="Write your story here... Include details about the origin, characters, and the message it carries..."
-                      rows={8}
-                      className="w-full px-4 py-3 rounded-xl bg-muted border border-border focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none resize-none"
+                      placeholder="Write your story here... Include the origin, characters, setting, and the message it carries. You can write in English, Urdu, or Punjabi."
+                      rows={10}
+                      className="w-full px-4 py-3 rounded-xl bg-muted/50 border border-border focus:border-secondary focus:ring-2 focus:ring-secondary/20 outline-none resize-none transition-all leading-relaxed"
                     />
+                    <p className="text-xs text-muted-foreground mt-1.5 text-right">
+                      {newStory.content.length} characters
+                    </p>
                   </div>
 
-                  <Button onClick={handleSubmitStory} size="lg" className="w-full">
-                    <Send className="w-4 h-4 mr-2" />
-                    Submit for Review
+                  <Button
+                    onClick={handleSubmitStory}
+                    size="lg"
+                    className="w-full bg-secondary hover:bg-secondary/90 text-secondary-foreground shadow-sm"
+                    disabled={createStoryMutation.isPending}
+                  >
+                    {createStoryMutation.isPending ? (
+                      <span className="flex items-center gap-2">
+                        <span className="w-4 h-4 border-2 border-secondary-foreground/30 border-t-secondary-foreground rounded-full animate-spin" />
+                        Submitting...
+                      </span>
+                    ) : (
+                      <>
+                        <Send className="w-4 h-4 mr-2" />
+                        Submit for Review
+                      </>
+                    )}
                   </Button>
 
-                  <p className="text-xs text-muted-foreground text-center">
+                  <p className="text-xs text-muted-foreground text-center leading-relaxed">
                     By submitting, you agree that your story may be edited for clarity and published on our platform.
+                    All submissions are reviewed before publishing.
                   </p>
                 </div>
               </div>
