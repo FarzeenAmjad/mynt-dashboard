@@ -1377,11 +1377,13 @@ Separate types for mutations that omit auto-generated fields:
 
 ### .env.local
 
+A `.env.example` at the repo root documents these names (copy it to `.env.local` and fill in real values; `.env.local` is git-ignored).
+
 | Variable | Purpose | Sensitivity |
 |----------|---------|-------------|
 | `VITE_SUPABASE_URL` | Supabase project REST API URL | Low (public) |
 | `VITE_SUPABASE_ANON_KEY` | Supabase anonymous/public API key (safe for client-side — RLS enforces security) | Low (public) |
-| `VITE_GEMINI_API_KEY` | Google Gemini API key for chatbot | **Medium** (should be restricted to specific referrers in production) |
+| `OPENAI_API_KEY` | OpenAI API key used by the chatbot and storyteller features | **High** — server-only. Deliberately **not** prefixed `VITE_`, so Vite never inlines it into the client bundle. It is read only inside `api/chat.ts` and `api/story.ts` (Vercel Edge Functions); the browser never sees it. |
 
 ### Configuration Files
 
@@ -1437,20 +1439,21 @@ This single rewrite rule ensures all routes are handled by the SPA's client-side
 ### Deployment Steps
 
 1. **Connect repository** to Vercel (GitHub integration)
-2. **Set environment variables** in Vercel dashboard:
+2. **Set environment variables** in Vercel dashboard (Project Settings → Environment Variables):
    - `VITE_SUPABASE_URL`
    - `VITE_SUPABASE_ANON_KEY`
-   - `VITE_GEMINI_API_KEY`
+   - `OPENAI_API_KEY` — **no** `VITE_` prefix; this is consumed only by the `api/chat.ts` and `api/story.ts` serverless functions, never by client code
 3. **Build settings:**
    - Framework Preset: Vite
    - Build Command: `npm run build`
    - Output Directory: `dist`
    - Install Command: `npm install`
+   - Vercel auto-detects the top-level `api/` directory as serverless/edge functions — no extra config needed
 4. **Deploy** — Vercel auto-deploys on push to main
 
 ### Production Considerations
 
-- **Gemini API Key:** Restrict the key to specific HTTP referrers (your Vercel domain) in Google Cloud Console
+- **OpenAI API Key:** Kept server-side only (`OPENAI_API_KEY` in `api/chat.ts`/`api/story.ts`) and is never bundled into client JS, so it can't be extracted from the browser. As a safety net, set a monthly usage limit on the key in the OpenAI dashboard.
 - **Supabase CORS:** Configure allowed origins in Supabase dashboard to only allow your Vercel domain
 - **Custom Domain:** Configure in Vercel dashboard under Domains settings
 

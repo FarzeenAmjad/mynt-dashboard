@@ -9,6 +9,7 @@ export default tseslint.config(
   {
     extends: [js.configs.recommended, ...tseslint.configs.recommended],
     files: ["**/*.{ts,tsx}"],
+    ignores: ["api/**"],
     languageOptions: {
       ecmaVersion: 2020,
       globals: globals.browser,
@@ -20,6 +21,20 @@ export default tseslint.config(
     rules: {
       ...reactHooks.configs.recommended.rules,
       "react-refresh/only-export-components": ["warn", { allowConstantExport: true }],
+      "@typescript-eslint/no-unused-vars": "off",
+    },
+  },
+  {
+    // Vercel Edge Functions (server-side only) — Node env vars + Web
+    // Fetch/Streams globals (Request/Response/ReadableStream/TextEncoder),
+    // no React/browser-only rules apply here.
+    extends: [js.configs.recommended, ...tseslint.configs.recommended],
+    files: ["api/**/*.{ts,tsx}"],
+    languageOptions: {
+      ecmaVersion: 2020,
+      globals: { ...globals.node, ...globals.browser },
+    },
+    rules: {
       "@typescript-eslint/no-unused-vars": "off",
     },
   },
