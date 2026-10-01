@@ -7,6 +7,16 @@ import OpenAI from "openai";
 
 export const config = { runtime: "edge" };
 
+// Only accept requests from the site itself. This stops casual reuse, not a
+// determined attacker; an OpenAI project usage limit is the real backstop.
+const ALLOWED_ORIGINS = [
+  "https://mynt-dashboard.vercel.app",
+  "http://localhost:8080", // `vite dev` / `vercel dev`
+];
+
+const MAX_MESSAGES = 20; // most recent turns sent per request
+const MAX_CHARS = 2000; // characters per message
+
 const STORYTELLER_PROMPT = `You are the Pakistani Folklore Storyteller AI, a master narrator of Pakistani myths, legends, folklore, and cultural tales. You are deeply knowledgeable about stories from all regions of Pakistan — Punjab, Sindh, Balochistan, KPK, Gilgit-Baltistan, and Azad Kashmir.
 
 Your storytelling style:
@@ -39,9 +49,19 @@ interface ChatMessage {
   content: string;
 }
 
+interface Turn {
+  role: "user" | "assistant";
+  content: string;
+}
+
 export default async function handler(req: Request): Promise<Response> {
   if (req.method !== "POST") {
     return new Response("Method not allowed", { status: 405 });
+  }
+
+  const origin = req.headers.get("origin");
+  if (!origin || !ALLOWED_ORIGINS.includes(origin)) {
+    return new Response("Forbidden", { status: 403 });
   }
 
   const apiKey = process.env.OPENAI_API_KEY;
@@ -60,11 +80,26 @@ export default async function handler(req: Request): Promise<Response> {
     return new Response("Invalid request body", { status: 400 });
   }
 
-  // Only user/assistant turns are expected from the client — the system
-  // prompt always comes from the server, never from the request body.
-  const conversation = messages.filter(
-    (m) => m.role === "user" || m.role === "assistant"
-  );
+  // Only user/assistant turns are accepted from the client (the system
+  // prompt always comes from the server, never from the request body),
+  // trimmed to the most recent turns and capped per-message to bound cost.
+  const conversation = messages
+    .filter(
+      (m): m is Turn =>
+        (m?.role === "user" || m?.role === "assistant") &&
+        typeof m?.content === "string"
+    )
+    .slice(-MAX_MESSAGES)
+    .map((m) => ({ role: m.role, content: m.content.slice(0, MAX_CHARS) }));
+
+  if (
+    conversation.length === 0 ||
+    conversation[conversation.length - 1].role !== "user"
+  ) {
+    return new Response("The last message must be from the user", {
+      status: 400,
+    });
+  }
 
   const client = new OpenAI({ apiKey });
 
